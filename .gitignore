@@ -5,3 +5,9 @@
 /TCP_receiver_Draft
 /TCP_sender_Draft
 /file1.pdf
+.vscode
+*.o
+*.a
+*.so
+*.out
+*.pdf
