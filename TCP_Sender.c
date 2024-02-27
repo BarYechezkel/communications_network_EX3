@@ -1,133 +1,186 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <time.h>
-#include <netinet/tcp.h>
+#include <stdio.h> // Standard input/output library
+#include <arpa/inet.h> // For the in_addr structure and the inet_pton function
+#include <sys/socket.h> // For the socket function
+#include <unistd.h> // For the close function
+#include <string.h> // For the memset function
 
+//##################################################################################################################
+//####################################TODO
+// GET THE PARAMETERS FROM COMMAND LINE
+//##################################################################################################################
+
+
+/*
+ * @brief The TCP's server IP address to connect to.
+ * @note The default IP address is 127.0.0.1 (localhost)
+*/
+//#define RECIEVER_IP "127.0.0.1"
+
+
+/*
+ * @brief The TCP's sender port to connect to.
+ * @note The default port is 5060.
+*/
+//#define RECIEVER_PORT 5060
+
+/*
+ * @brief The buffer size to store the received message.
+ * @note The default buffer size is 1024.
+*/
 #define BUFFER_SIZE 1024
+
+////////////////////////
 #define FILE_SIZE 2097152  // 2MB
+//////////////////////////
 
-void print_statistics(double time_taken, double average_bandwidth) {
-    printf("----------------------------------\n");
-    printf("- * Statistics * -\n");
-    printf("- Run #1 Data: Time=%.1fms; Speed=%.2fMB/s\n", time_taken, average_bandwidth);
-    printf("- Average time: %.1fms\n", time_taken);
-    printf("- Average bandwidth: %.2fMB/s\n", average_bandwidth);
-    printf("----------------------------------\n");
-}
 
-int main(int argc, char *argv[]) {
+/*
+* @brief A random data generator function based on srand() and rand().
+* @param size The size of the data to generate (up to 2^32 bytes).
+* @return A pointer to the buffer.
+*/
+  char *util_generate_random_data(unsigned int size) {
+     char *buffer = NULL;
+
+    // Argument check.
+    if (size == 0)
+        return NULL;
+
+    buffer = (char *)calloc(size, sizeof(char));
+
+    // Error checking.
+     if (buffer == NULL) 
+        return NULL;
+
+    // Randomize the seed of the random number generator.
+    srand(time(NULL));
+
+    for (unsigned int i = 0; i < size; i++) *(buffer + i) = ((unsigned int)rand() % 255 + 1);
+
+     return buffer;
+  }
+
+
+
+/*
+ * @brief TCP Client main function.
+ * @param None
+ * @return 0 if the client runs successfully, 1 otherwise.
+*/
+int main(int argc, char *argv[])
+{
     if (argc != 7) {
         fprintf(stderr, "Usage: %s -ip <IP> -p <PORT> -algo <ALGO>\n", argv[0]);
-        exit(EXIT_FAILURE);
+        return 1;
+    }
+//////////////////////////////////////////////////////////////////////////////////////
+    char *RECIEVER_IP = argv[2];
+    int RECIEVER_PORT = atoi(argv[4]);
+    char *algo = argv[6];
+//////////////////////////////////////////////////////////////////////////////////////
+
+
+    // The variable to store the socket file descriptor.
+    //uniq number for each socket
+    int sock = -1;
+
+    // The variable to store the server's address.
+    struct sockaddr_in receiver;
+
+    // Create a message to send to the server.
+    //char *message = "Hello from sender";
+    //////////////////////////////////////////////////////////////////////////////////////
+    char *message = util_generate_random_data(FILE_SIZE);
+
+    //////////////////////////////////////////////////////////////////////////////////////
+
+    // Create a buffer to store the received message.
+    char buffer[BUFFER_SIZE] = {0};
+
+    // Reset the server structure to zeros.
+    memset(&receiver, 0, sizeof(receiver));
+
+    // Try to create a TCP socket (IPv4, stream-based, default protocol).
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    // If the socket creation failed, print an error message and return 1.
+    if (sock == -1)
+    {
+        perror("socket(2)");
+        return 1;
     }
 
-    const char *ip;
-    int port;
-    const char *algorithm;
-    for (int i = 1; i < argc; i += 2) {
-        if (strcmp(argv[i], "-ip") == 0) {
-            ip = argv[i + 1];
-        } else if (strcmp(argv[i], "-p") == 0) {
-            port = atoi(argv[i + 1]);
-        } else if (strcmp(argv[i], "-algo") == 0) {
-            algorithm = argv[i + 1];
-        }
+    // Convert the server's address from text to binary form and store it in the server structure.
+    // This should not fail if the address is valid (e.g. "127.0.0.1").
+    if (inet_pton(AF_INET, RECIEVER_IP, &receiver.sin_addr) <= 0)
+    {
+        perror("inet_pton(3)");
+        close(sock);
+        return 1;
     }
 
-    printf("Starting Sender...\n");
+    // Set the server's address family to AF_INET (IPv4).
+    receiver.sin_family = AF_INET;
 
-    // Create socket
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        perror("socket creation failed");
-        exit(EXIT_FAILURE);
+    // Set the server's port to the defined port. Note that the port must be in network byte order,
+    // so we first convert it to network byte order using the htons function.
+    receiver.sin_port = htons(RECIEVER_PORT);
 
-            printf("Starting Sender...\n");
+    fprintf(stdout, "Connecting to %s:%d...\n", RECIEVER_IP, RECIEVER_PORT);
 
+    // Try to connect to the server using the socket and the server structure.
+    if (connect(sock, (struct sockaddr *)&receiver, sizeof(receiver)) < 0){
+        perror("connect(2)");
+        close(sock);
+        return 1;
     }
 
-    // Set congestion control algorithm
-    if (setsockopt(sockfd, IPPROTO_TCP, TCP_CONGESTION, algorithm, strlen(algorithm)) < 0) {
-        perror("setsockopt failed");
-        close(sockfd);
-        exit(EXIT_FAILURE);
+    fprintf(stdout, "Successfully connected to the receiver!\n"
+                    "Sending message to the receiver: %s\n", message);
+                
 
+    // Try to send the message to the server using the socket.
+    int bytes_sent = send(sock, message, strlen(message) + 1, 0);
 
-            printf("Starting Sender.2..\n");
-
+    // If the message sending failed, print an error message and return 1.
+    // If no data was sent, print an error message and return 1. Only occurs if the connection was closed.
+    if (bytes_sent <= 0)
+    {
+        perror("send(2)");
+        close(sock);
+        return 1;
     }
 
-    struct sockaddr_in servaddr;
-    memset(&servaddr, 0, sizeof(servaddr)); // Initialize servaddr with zeros
-    printf("Starting Sender3...\n");
+    fprintf(stdout, "Sent %d bytes to the receiver!\n"
+                    "Waiting for the receiver to respond...\n", bytes_sent);
 
-    // Assign IP and port
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr(ip);
-    servaddr.sin_port = htons(port);
-    printf("Starting Sender4...\n");
+    // Try to receive a message from the server using the socket and store it in the buffer.
+    int bytes_received = recv(sock, buffer, sizeof(buffer), 0);
 
-    // Connect the client socket to server socket
-    if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0) {
-                            printf("Starting Sender5...\n");
+    // change the size 
 
-        perror("connection with the server failed");
-        close(sockfd);
-
-        exit(EXIT_FAILURE);
-
+    // If the message receiving failed, print an error message and return 1.
+    // If no data was received, print an error message and return 1. Only occurs if the connection was closed.
+    if (bytes_received <= 0)
+    {
+        perror("recv(2)");
+        close(sock);
+        return 1;
     }
 
-    printf("Connected to Receiver, beginning to send file...\n");
+    // Ensure that the buffer is null-terminated, no matter what message was received.
+    // This is important to avoid SEGFAULTs when printing the buffer.
+    if (buffer[BUFFER_SIZE - 1] != '\0')
+        buffer[BUFFER_SIZE- 1] = '\0';
 
-    clock_t start, end;
-    double time_taken;
-    int total_bytes_sent = 0;
-            printf("Starting Sender6...\n");
+    // Print the received message.
+    fprintf(stdout, "Got %d bytes from the receiver, which says: %s\n", bytes_received, buffer);
 
-    char *data = (char *)malloc(FILE_SIZE * sizeof(char));
-    // Populate 'data' with random bytes, or read from a file
+    // Close the socket with the server.
+    close(sock);
 
-    // Send data
-    start = clock();
-    int bytes_sent = send(sockfd, data, FILE_SIZE, 0);
-    end = clock();
-            printf("Starting Sender7...\n");
+    fprintf(stdout, "Connection closed!\n");
 
-    if (bytes_sent < 0) {
-        perror("send failed");
-        close(sockfd);
-        free(data);
-        exit(EXIT_FAILURE);
-                    printf("Starting Sender8...\n");
-
-    }
-
-    total_bytes_sent += bytes_sent;
-
-    printf("File transfer completed.\n");
-
-    // Send exit message
-    send(sockfd, "exit", 4, 0);
-
-    printf("Waiting for Receiver response...\n");
-
-    // Calculate time taken and average bandwidth
-    time_taken = ((double)(end - start)) * 1000 / CLOCKS_PER_SEC; // in milliseconds
-    double average_bandwidth = (total_bytes_sent / (1024.0 * 1024.0)) / (time_taken / 1000.0); // in MB/s
-            printf("Starting Sender9...\n");
-
-    // Print statistics
-    print_statistics(time_taken, average_bandwidth);
-
-    // Clean up
-    close(sockfd);
-    free(data);
-
-    printf("Sender end.\n");
-
+    // Return 0 to indicate that the client ran successfully.
     return 0;
 }
