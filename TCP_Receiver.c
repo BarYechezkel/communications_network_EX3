@@ -4,6 +4,8 @@
 #include <unistd.h>     // For the close function
 #include <string.h>     // For the memset function
 #include <time.h>
+#include <netinet/tcp.h>
+#include <stdlib.h>
 //##################################################################################################################
 //####################################TODO
 // GET THE PARAMETERS FROM COMMAND LINE
@@ -58,8 +60,8 @@ int main(int argc, char *argv[])
     ////////////////////////////////////////////////////////////////////
     clock_t start, end;
     double time_taken;
-    int RECEIVER_PORT =  atoi(argv[2]);
-    char algo = argv[4];
+    int RECEIVER_PORT = atoi(argv[2]);
+    char *algo = argv[4];
     //////////////////////////////////////////////////////////////////////
 
     // The variable to store the socket file descriptor.
@@ -81,7 +83,7 @@ int main(int argc, char *argv[])
     int messageLen = strlen(message) + 1;
 
     // The variable to store the socket option for reusing the receiver's address.
-    int opt = 1;
+    //int opt = 1;
 
     // Reset the receiver and sender structures to zeros.
     memset(&receiver, 0, sizeof(receiver));
@@ -98,7 +100,7 @@ int main(int argc, char *argv[])
 
     // Set the socket option to reuse the receiver's address.
     // This is useful to avoid the "Address already in use" error message when restarting the receiver.
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+   if (setsockopt(sock, IPPROTO_TCP, TCP_CONGESTION, algo, strlen(algo)) < 0)
     {
         perror("setsockopt(2)");
         close(sock);
