@@ -4,25 +4,6 @@
 #include <unistd.h> // For the close function
 #include <string.h> // For the memset function
 
-//##################################################################################################################
-//####################################TODO
-// GET THE PARAMETERS FROM COMMAND LINE
-//##################################################################################################################
-
-
-/*
- * @brief The TCP's server IP address to connect to.
- * @note The default IP address is 127.0.0.1 (localhost)
-*/
-//#define RECIEVER_IP "127.0.0.1"
-
-
-/*
- * @brief The TCP's sender port to connect to.
- * @note The default port is 5060.
-*/
-//#define RECIEVER_PORT 5060
-
 /*
  * @brief The buffer size to store the received message.
  * @note The default buffer size is 1024.
@@ -63,7 +44,7 @@
 
 
 /*
- * @brief TCP Client main function.
+ * @brief TCP Sender main function.
  * @param None
  * @return 0 if the client runs successfully, 1 otherwise.
 */
@@ -88,10 +69,8 @@ int main(int argc, char *argv[])
     struct sockaddr_in receiver;
 
     // Create a message to send to the server.
-    //char *message = "Hello from sender";
     //////////////////////////////////////////////////////////////////////////////////////
     char *message = util_generate_random_data(FILE_SIZE);
-
     //////////////////////////////////////////////////////////////////////////////////////
 
     // Create a buffer to store the received message.
@@ -136,7 +115,7 @@ int main(int argc, char *argv[])
     }
 
     fprintf(stdout, "Successfully connected to the receiver!\n"
-                    "Sending message to the receiver: %s\n", message);
+                    "Sending message to the receiver: \n");
                 
 
     // Try to send the message to the server using the socket.
@@ -154,27 +133,7 @@ int main(int argc, char *argv[])
     fprintf(stdout, "Sent %d bytes to the receiver!\n"
                     "Waiting for the receiver to respond...\n", bytes_sent);
 
-    // Try to receive a message from the server using the socket and store it in the buffer.
-    int bytes_received = recv(sock, buffer, sizeof(buffer), 0);
-
-    // change the size 
-
-    // If the message receiving failed, print an error message and return 1.
-    // If no data was received, print an error message and return 1. Only occurs if the connection was closed.
-    if (bytes_received <= 0)
-    {
-        perror("recv(2)");
-        close(sock);
-        return 1;
-    }
-
-    // Ensure that the buffer is null-terminated, no matter what message was received.
-    // This is important to avoid SEGFAULTs when printing the buffer.
-    if (buffer[BUFFER_SIZE - 1] != '\0')
-        buffer[BUFFER_SIZE- 1] = '\0';
-
-    // Print the received message.
-    fprintf(stdout, "Got %d bytes from the receiver, which says: %s\n", bytes_received, buffer);
+   
 
     // Close the socket with the server.
     close(sock);

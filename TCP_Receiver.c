@@ -6,18 +6,10 @@
 #include <time.h>
 #include <netinet/tcp.h>
 #include <stdlib.h>
-//##################################################################################################################
-//####################################TODO
-// GET THE PARAMETERS FROM COMMAND LINE
-//##################################################################################################################
 
 #define CLOCKS_PER_SEC  ((__clock_t) 1000000)
 
-/*
- * @brief The TCP's sender port.
- * @note The default port is 5060.
- */
-//#define RECEIVER_PORT 5060
+
 
 /*
  * @brief The maximum number of senders that the receiver can handle.
@@ -46,7 +38,7 @@ void print_statistics(double time_taken, double average_bandwidth) {
 
 
 /*
- * @brief TCP Server main function.
+ * @brief TCP Receiver main function.
  * @param None
  * @return 0 if the server runs successfully, 1 otherwise.
  */
@@ -81,9 +73,6 @@ int main(int argc, char *argv[])
 
     // Get the message length.
     int messageLen = strlen(message) + 1;
-
-    // The variable to store the socket option for reusing the receiver's address.
-    //int opt = 1;
 
     // Reset the receiver and sender structures to zeros.
     memset(&receiver, 0, sizeof(receiver));
@@ -190,21 +179,6 @@ int main(int argc, char *argv[])
         printf("File transfer completed.\n");
         fprintf(stdout, "Received %d bytes from the sender %s:%d: \n", total_recv, inet_ntoa(sender.sin_addr), ntohs(sender.sin_port));
 
-        // Send back a message to the client.
-        int bytes_sent = send(sender_sock, message, messageLen, 0);
-
-        // If the message sending failed, print an error message and return 1.
-        // We do not need to check for 0 bytes sent, as if the sender disconnected, we would have already closed the socket.
-        if (bytes_sent < 0)
-        {
-            perror("send(2)");
-            close(sender_sock);
-            close(sock);
-            return 1;
-        }
-
-        fprintf(stdout, "Sent %d bytes to the sender %s:%d!\n", bytes_sent, inet_ntoa(sender.sin_addr), ntohs(sender.sin_port));
-        printf("Waiting for Sender response\n");
         // Close the sender's socket and continue to the next iteration.
         close(sender_sock);
 

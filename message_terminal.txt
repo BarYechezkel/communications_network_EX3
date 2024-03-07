@@ -1,0 +1,8 @@
+./TCP_Receiver -p 5060 -algo reno
+
+./TCP_Sender -ip 127.0.0.1 -p 5060 -algo reno
+
+./TCP_Receiver -p 5060 -algo cubic
+
+./TCP_Sender -ip 127.0.0.1 -p 5060 -algo cubic
+

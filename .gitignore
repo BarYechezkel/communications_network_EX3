@@ -11,7 +11,6 @@
 *.so
 *.out
 *.pdf
-/message_terminal.txt
 /TCP_Receiver-gpt.c
 /TCP_Sender-gpt.c
 /Text_File.txt
