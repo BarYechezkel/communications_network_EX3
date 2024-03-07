@@ -2,8 +2,6 @@
 /TCP_Receiver.o
 /TCP_Sender
 /TCP_Sender.o
-/TCP_receiver_Draft
-/TCP_sender_Draft
 /file1.pdf
 .vscode
 *.o
@@ -11,6 +9,4 @@
 *.so
 *.out
 *.pdf
-/TCP_Receiver-gpt.c
-/TCP_Sender-gpt.c
-/Text_File.txt
+
