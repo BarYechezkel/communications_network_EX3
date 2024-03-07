@@ -10,7 +10,6 @@
 #define CLOCKS_PER_SEC  ((__clock_t) 1000000)
 
 
-
 /*
  * @brief The maximum number of senders that the receiver can handle.
  * @note The default maximum number of senders is 1.
@@ -23,7 +22,6 @@
  */
 // #define BUFFER_SIZE 1024
 #define BUFFER_SIZE 2097152
-
 
 
 void print_statistics(double time_taken, double average_bandwidth) {
@@ -40,39 +38,30 @@ void print_statistics(double time_taken, double average_bandwidth) {
 /*
  * @brief TCP Receiver main function.
  * @param None
- * @return 0 if the server runs successfully, 1 otherwise.
+ * @return 0 if the Receiver runs successfully, 1 otherwise.
  */
 int main(int argc, char *argv[])
 {
+    //check if the number of arguments that we get from command line is correcct 
     if (argc != 5) {
         fprintf(stderr, "Usage: %s -p <PORT> -algo <ALGO>\n", argv[0]);
         return 1;
     }
 
-    ////////////////////////////////////////////////////////////////////
+///////paramters
     clock_t start, end;
     double time_taken;
     int RECEIVER_PORT = atoi(argv[2]);
     char *algo = argv[4];
-    //////////////////////////////////////////////////////////////////////
 
-    // The variable to store the socket file descriptor.
-    int sock = -1;
+    
+    int sock = -1;// The variable to store the socket file descriptor.
 
-    // The variable to store the receiver's address.
-    struct sockaddr_in receiver;
+    struct sockaddr_in receiver;// The variable to store the receiver's address.
 
-    // The variable to store the sender's address.
-    struct sockaddr_in sender;
+    struct sockaddr_in sender; // The variable to store the sender's address.
 
-    // Stores the sender's structure length.
-    socklen_t sender_len = sizeof(sender);
-
-    // Create a message to send to the sender.
-    char *message = "Good morning, Vietnam\n";
-
-    // Get the message length.
-    int messageLen = strlen(message) + 1;
+    socklen_t sender_len = sizeof(sender);// Stores the sender's structure length.
 
     // Reset the receiver and sender structures to zeros.
     memset(&receiver, 0, sizeof(receiver));
@@ -106,7 +95,6 @@ int main(int argc, char *argv[])
     receiver.sin_port = htons(RECEIVER_PORT);
 
 
-
     // Try to bind the socket to the receiver's address and port.
     if (bind(sock, (struct sockaddr *)&receiver, sizeof(receiver)) < 0)
     {
@@ -129,7 +117,7 @@ int main(int argc, char *argv[])
     // The receiver's main loop.
     while (1)
     {
-        // Try to accept a new client connection.
+        // Try to accept a new sender connection.
         int sender_sock = accept(sock, (struct sockaddr *)&sender, &sender_len);
 
         // If the accept call failed, print an error message and return 1.
@@ -161,7 +149,7 @@ int main(int argc, char *argv[])
                 return 1;
             }
             
-            // If the amount of received bytes is 0, the client has disconnected.
+            // If the amount of received bytes is 0, the sender has disconnected.
             // Close the receiver's socket and continue to the next iteration.
             else if (bytes_received == 0)
             {
@@ -183,7 +171,6 @@ int main(int argc, char *argv[])
         close(sender_sock);
 
         fprintf(stdout, "Sender %s:%d disconnected\n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port));
-
 
         // Calculate time taken and average bandwidth
         time_taken = ((double)(end - start)) * 1000 / CLOCKS_PER_SEC; // in milliseconds

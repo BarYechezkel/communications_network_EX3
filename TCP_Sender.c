@@ -3,16 +3,16 @@
 #include <sys/socket.h> // For the socket function
 #include <unistd.h> // For the close function
 #include <string.h> // For the memset function
+#include <stdlib.h>
+
+
 
 /*
  * @brief The buffer size to store the received message.
  * @note The default buffer size is 1024.
 */
 #define BUFFER_SIZE 1024
-
-////////////////////////
 #define FILE_SIZE 2097152  // 2MB
-//////////////////////////
 
 
 /*
@@ -42,41 +42,36 @@
   }
 
 
-
 /*
- * @brief TCP Sender main function.
- * @param None
- * @return 0 if the client runs successfully, 1 otherwise.
+ * TCP Sender main function.
+ * return 0 if the Sender runs successfully, 1 otherwise.
 */
 int main(int argc, char *argv[])
 {
+    //check if the number of arguments that we get from command line is correcct 
     if (argc != 7) {
         fprintf(stderr, "Usage: %s -ip <IP> -p <PORT> -algo <ALGO>\n", argv[0]);
         return 1;
     }
-//////////////////////////////////////////////////////////////////////////////////////
+///////paramters
     char *RECIEVER_IP = argv[2];
     int RECIEVER_PORT = atoi(argv[4]);
     char *algo = argv[6];
-//////////////////////////////////////////////////////////////////////////////////////
 
 
     // The variable to store the socket file descriptor.
     //uniq number for each socket
     int sock = -1;
 
-    // The variable to store the server's address.
+    // The variable to store the receiver's address.
     struct sockaddr_in receiver;
 
-    // Create a message to send to the server.
+    // Create a file to send to the receiver.
     //////////////////////////////////////////////////////////////////////////////////////
-    char *message = util_generate_random_data(FILE_SIZE);
+    char *file = util_generate_random_data(FILE_SIZE);
     //////////////////////////////////////////////////////////////////////////////////////
 
-    // Create a buffer to store the received message.
-    char buffer[BUFFER_SIZE] = {0};
-
-    // Reset the server structure to zeros.
+    // Reset the receiver structure to zeros.
     memset(&receiver, 0, sizeof(receiver));
 
     // Try to create a TCP socket (IPv4, stream-based, default protocol).
@@ -89,7 +84,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Convert the server's address from text to binary form and store it in the server structure.
+    // Convert the receiver's address from text to binary form and store it in the receiver structure.
     // This should not fail if the address is valid (e.g. "127.0.0.1").
     if (inet_pton(AF_INET, RECIEVER_IP, &receiver.sin_addr) <= 0)
     {
@@ -98,16 +93,16 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Set the server's address family to AF_INET (IPv4).
+    // Set the receiver's address family to AF_INET (IPv4).
     receiver.sin_family = AF_INET;
 
-    // Set the server's port to the defined port. Note that the port must be in network byte order,
+    // Set the receiver's port to the defined port. Note that the port must be in network byte order,
     // so we first convert it to network byte order using the htons function.
     receiver.sin_port = htons(RECIEVER_PORT);
 
     fprintf(stdout, "Connecting to %s:%d...\n", RECIEVER_IP, RECIEVER_PORT);
 
-    // Try to connect to the server using the socket and the server structure.
+    // Try to connect to the receiver using the socket and the receiver structure.
     if (connect(sock, (struct sockaddr *)&receiver, sizeof(receiver)) < 0){
         perror("connect(2)");
         close(sock);
@@ -118,8 +113,8 @@ int main(int argc, char *argv[])
                     "Sending message to the receiver: \n");
                 
 
-    // Try to send the message to the server using the socket.
-    int bytes_sent = send(sock, message, strlen(message) + 1, 0);
+    // Try to send the message to the receiver using the socket.
+    int bytes_sent = send(sock, file, strlen(file) + 1, 0);
 
     // If the message sending failed, print an error message and return 1.
     // If no data was sent, print an error message and return 1. Only occurs if the connection was closed.
@@ -135,11 +130,11 @@ int main(int argc, char *argv[])
 
    
 
-    // Close the socket with the server.
+    // Close the socket with the receiver.
     close(sock);
 
     fprintf(stdout, "Connection closed!\n");
 
-    // Return 0 to indicate that the client ran successfully.
+    // Return 0 to indicate that the sender ran successfully.
     return 0;
 }
