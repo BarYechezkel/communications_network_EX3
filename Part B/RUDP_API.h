@@ -11,6 +11,9 @@
 #define ACK 2
 #define DATA 3
 #define FIN 4
+#define FIN_ACK 5
+#define END 6
+
 
 #define Buffer 65000
 
