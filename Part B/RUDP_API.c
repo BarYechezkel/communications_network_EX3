@@ -126,26 +126,92 @@ int rudp_send(int sock, const void *user_data, size_t size_D, const struct socka
     packetEND.sequence_number = 0;
     packetEND.checksum = 0;
     int bytes_sent = sendto(sock, &packetEND, sizeof(packetEND), 0, (struct sockaddr *)&reciver_address, sizeof(reciver_address)); /// TODO
-
+    if (bytes_sent == -1)
+    {
+        perror("sendto() failed");
+        close(sock);
+        return -1;
+    }
     return total_bytes_sent;
 }
 
-int RUDP_connect(int sock, const struct sockaddr *reciver_address)
+int RUDP_connect_reciever(int sock, int port)
 {
+    // Setup the server address structure.
+    struct sockaddr_in serverAddress;
+    memset(&serverAddress, 0, sizeof(serverAddress));
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(port);
+    serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+    int bind_Sock = bind(sock, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
+    if (bind_Sock == -1)
+    {
+        perror("bind() failed");
+        close(sock);
+        return -1;
+    }
+    // receive SYN message
+    struct sockaddr_in sender_address;
+    memset((char *)&sender_address, 0, sizeof(sender_address));
+    header packetRecv;
+    int bytes_received = recvfrom(sock, &packetRecv, sizeof(packetRecv), 0, NULL, 0);
+    if (bytes_received == EOF)
+    {
+        perror("recvfrom failed");
+        return -1;
+    }
+
+    if (connect(sock, (struct sockaddr *)&sender_address, sizeof(sender_address)) == -1)
+    {
+
+        perror("connect() failed");
+        return -1;
+    }
+
+    if (packetRecv.flags == SYN)
+    {
+        header send_ack;
+        memset((char *)&send_ack, 0, sizeof(send_ack));
+        send_ack.flags = ACK;
+        int sendResult = sendto(sock, &send_ack, sizeof(header), 0, NULL, 0);
+        if (sendResult == -1)
+        {
+            printf("sendto() failed ");
+            return -1;
+        }
+    }
+
+    set_timeout(sock, TIME_OUT * 10);
+
+    return 1;
+}
+
+int RUDP_connect_sender(int sock, char* ip ,int port)
+{
+
+// setup a timeout for the socket
+  if (set_timeout(socket, TIME_OUT) == -1) {
+    return -1;
+  }
+  // Setup the server address structure.
+  struct sockaddr_in reciver_address;
+  memset(&reciver_address, 0, sizeof(reciver_address));
+  reciver_address.sin_family = AF_INET;
+  reciver_address.sin_port = htons(port);
+  int rval = inet_pton(AF_INET, (const char *)ip, &reciver_address.sin_addr);
+  if (rval <= 0) {
+    printf("inet_pton() failed");
+    return -1;
+  }
+
     header packetSYN;
-    packetSYN.length_data = 0;
+     memset(&packetSYN, 0, sizeof(packetSYN));
     packetSYN.flags = SYN;
-    packetSYN.sequence_number = 0;
-    packetSYN.checksum = 0;
 
     header packetAck;
-    packetAck.length_data;
-    packetAck.flags;
-    packetAck.sequence_number;
-    packetAck.checksum;
     memset(&packetAck, 0, sizeof(packetAck));
 
-    if (connect(socket, (struct sockaddr *)&reciver_address, sizeof(reciver_address)) == -1)
+    if (connect(sock, (struct sockaddr *)&reciver_address, sizeof(reciver_address)) == -1)
     {
         printf("connect failed");
         return -1;
@@ -188,6 +254,13 @@ int rudp_recv(int sock, int data_size)
             return -1;
         }
         int bytes_received = recvfrom(sock, data_to_recv, sizeof(header) + Buffer, 0, NULL, 0);
+         if (bytes_received == -1)
+        {
+            printf("recvfrom() FAILD");
+            return -1;
+        }
+
+
         int cal_check = calculate_checksum(data_to_recv + sizeof(header), sizeof(Buffer));
         memcpy(&packetRCV, data_to_recv, sizeof(packetRCV));
 
@@ -233,20 +306,21 @@ int rudp_close(int sock)
     header packetCLOSE;
     memset(&packetCLOSE, 0, sizeof(packetCLOSE));
     packetCLOSE.flags = FIN;
-    do{
-    int check = sendto(sock, &packetCLOSE, sizeof(packetCLOSE), 0, NULL, 0);
-    if (check == -1)
+    do
     {
-        printf("sendto() FAILD");
-        return -1;
-    }
- } while (wait_for_ACK(sock, packetCLOSE.sequence_number, clock(), TIME_OUT) < 0);
+        int check = sendto(sock, &packetCLOSE, sizeof(packetCLOSE), 0, NULL, 0);
+        if (check == -1)
+        {
+            printf("sendto() FAILD");
+            return -1;
+        }
+    } while (wait_for_ACK(sock, packetCLOSE.sequence_number, clock(), TIME_OUT) < 0);
     close(sock);
-  printf("The connection ended successfully");
+    printf("The connection ended successfully");
     return 1;
 }
 
-int send_ack(int socket, header packet)
+int send_ack(int socket, header packet) // for data
 {
     header ack_packet;
     memset(&ack_packet, 0, sizeof(header));
