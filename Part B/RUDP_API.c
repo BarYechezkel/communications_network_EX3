@@ -1,4 +1,17 @@
 #include "RUDP_API.h"
+
+#include <stdio.h>      // Standard input/output library
+#include <arpa/inet.h>  // For the in_addr structure and the inet_pton function
+#include <sys/socket.h> // For the socket function
+#include <unistd.h>     // For the close function
+#include <string.h>     // For the memset function
+#include <stdlib.h>
+#include <netinet/tcp.h>
+#include <time.h>
+
+
+
+
 #define TIME_OUT 1 // Timeout in seconds
 
 // creating RUDP socket
@@ -40,7 +53,7 @@ unsigned short int calculate_checksum(void *data, unsigned int bytes)
 // acknowledgment packet, and if it didn’t receive any, retransmits the data.
 
 // just to send data!
-int rudp_send(int sock, const void *user_data, size_t size_D, const struct sockaddr *reciver_address)
+int rudp_send(int sock, const void *user_data, size_t size_D)
 {
     int sq = 0;
     /////////////////////////////////////////////////
@@ -73,7 +86,7 @@ int rudp_send(int sock, const void *user_data, size_t size_D, const struct socka
         do
         {
             // Try to send the message to the server using the created socket and the server structure.
-            int bytes_sent = sendto(sock, data_to_send, sizeof(data_to_send), 0, (struct sockaddr *)&reciver_address, sizeof(reciver_address)); /// TODO
+            int bytes_sent = sendto(sock, data_to_send, sizeof(data_to_send), 0, NULL, 0);
             if (bytes_sent == -1)
             {
                 printf("sendto() faild");
@@ -107,7 +120,7 @@ int rudp_send(int sock, const void *user_data, size_t size_D, const struct socka
         do
         {
             // Try to send the message to the server using the created socket and the server structure.
-            int bytes_sent = sendto(sock, data_to_send, sizeof(data_to_send), 0, (struct sockaddr *)&reciver_address, sizeof(reciver_address)); /// TODO
+            int bytes_sent = sendto(sock, data_to_send, sizeof(data_to_send), 0, NULL, 0); /// TODO
             total_bytes_sent += bytes_sent;
             free(data_to_send);
             if (bytes_sent == -1)
@@ -125,7 +138,7 @@ int rudp_send(int sock, const void *user_data, size_t size_D, const struct socka
     packetEND.flags = END;
     packetEND.sequence_number = 0;
     packetEND.checksum = 0;
-    int bytes_sent = sendto(sock, &packetEND, sizeof(packetEND), 0, (struct sockaddr *)&reciver_address, sizeof(reciver_address)); /// TODO
+    int bytes_sent = sendto(sock, &packetEND, sizeof(packetEND), 0, NULL, 0); 
     if (bytes_sent == -1)
     {
         perror("sendto() failed");
@@ -152,9 +165,12 @@ int RUDP_connect_reciever(int sock, int port)
     }
     // receive SYN message
     struct sockaddr_in sender_address;
-    memset((char *)&sender_address, 0, sizeof(sender_address));
+    memset(&sender_address, 0, sizeof(sender_address));
+     socklen_t sender_address_len = sizeof(sender_address);
     header packetRecv;
-    int bytes_received = recvfrom(sock, &packetRecv, sizeof(packetRecv), 0, NULL, 0);
+    int bytes_received = recvfrom(sock, &packetRecv, sizeof(packetRecv), 0, 
+    (struct sockaddr*)&sender_address, &sender_address_len);
+
     if (bytes_received == EOF)
     {
         perror("recvfrom failed");
@@ -171,17 +187,18 @@ int RUDP_connect_reciever(int sock, int port)
     if (packetRecv.flags == SYN)
     {
         header send_ack;
-        memset((char *)&send_ack, 0, sizeof(send_ack));
+        memset(&send_ack, 0, sizeof(send_ack));
         send_ack.flags = ACK;
         int sendResult = sendto(sock, &send_ack, sizeof(header), 0, NULL, 0);
         if (sendResult == -1)
         {
-            printf("sendto() failed ");
+            printf("sendto() failed");
             return -1;
         }
+            // set_timeout(sock, TIME_OUT * 10);
+
     }
 
-    set_timeout(sock, TIME_OUT * 10);
 
     return 1;
 }
@@ -190,18 +207,21 @@ int RUDP_connect_sender(int sock, char* ip ,int port)
 {
 
 // setup a timeout for the socket
-  if (set_timeout(socket, TIME_OUT) == -1) {
-    return -1;
-  }
+//   if (set_timeout(socket, TIME_OUT) == -1) {
+//     return -1;
+//   }
   // Setup the server address structure.
   struct sockaddr_in reciver_address;
   memset(&reciver_address, 0, sizeof(reciver_address));
   reciver_address.sin_family = AF_INET;
   reciver_address.sin_port = htons(port);
-  int rval = inet_pton(AF_INET, (const char *)ip, &reciver_address.sin_addr);
+  int rval = inet_pton(AF_INET, (char*)ip, &reciver_address.sin_addr);
   if (rval <= 0) {
     printf("inet_pton() failed");
     return -1;
+
+
+    //inet_pton(AF_INET, RECIEVER_IP, &receiver.sin_addr) <= 0)
   }
 
     header packetSYN;
@@ -232,9 +252,10 @@ int RUDP_connect_sender(int sock, char* ip ,int port)
     }
     if (packetAck.flags == ACK)
     {
-        printf("connected complited");
+        printf("connected complited\n");
         return 1;
     }
+    return 1;
 }
 
 // Receive data from a peer.
@@ -264,10 +285,11 @@ int rudp_recv(int sock, int data_size)
         int cal_check = calculate_checksum(data_to_recv + sizeof(header), sizeof(Buffer));
         memcpy(&packetRCV, data_to_recv, sizeof(packetRCV));
 
-        if (cal_check != packetRCV.checksum)
-        {
-            return -1;
-        }
+        // if (cal_check != packetRCV.checksum)//////////////////////TODO
+        // {
+        //     printf("checksum invalid");
+        //     return -1;
+        // }
 
         if (send_ack(sock, packetRCV) == -1)
         {
@@ -333,7 +355,7 @@ int send_ack(int socket, header packet) // for data
     //   }
     if (packet.flags == DATA)
     {
-        ack_packet.flags == ACK;
+        ack_packet.flags = ACK;
     }
     ack_packet.sequence_number = packet.sequence_number; // same sq
     // ack_packet->checksum = checksum(ack_packet);

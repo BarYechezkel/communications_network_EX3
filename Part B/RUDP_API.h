@@ -7,6 +7,8 @@
 #include <netinet/tcp.h>
 #include <time.h>
 
+
+
 #define SYN 1
 #define ACK 2
 #define DATA 3
@@ -36,7 +38,7 @@ int rudp_sockets();
 
 //Sending data to the peer. The function should wait for an 
 //acknowledgment packet, and if it didn’t receive any, retransmits the data.
-int rudp_send(int sock, const void *user_data, size_t size_D, const struct sockaddr *reciver_address);
+int rudp_send(int sock, const void *user_data, size_t size_D);
 
 
 int RUDP_connect_sender(int sock, char* ip ,int port);

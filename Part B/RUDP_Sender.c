@@ -53,14 +53,14 @@ char *util_generate_random_data(unsigned int size)
 int main(int argc, char *argv[])
 {
     // check if the number of arguments that we get from command line is correcct
-    if (argc != 3)
+    if (argc != 5)
     {
         fprintf(stderr, "Usage: %s -ip <IP> -p <PORT>\n", argv[0]);
         return 1;
     }
     ///////paramters
-    char *RECIEVER_IP = argv[1];
-    int RECIEVER_PORT = atoi(argv[2]);
+    char *RECIEVER_IP = argv[2];
+    int RECIEVER_PORT = atoi(argv[4]);
 
     // The variable to store the socket file descriptor.
     int sock = -1;
@@ -95,12 +95,20 @@ int main(int argc, char *argv[])
     fprintf(stdout, "Successfully connected to the receiver!\n"
                     "Sending message to the receiver: \n");
 
+
+                                printf("444444");
+
+
     int decision = 0;
+            printf("333333");
+
     do
     {
+        printf("111111111111111");
 
         // Try to send the message to the receiver using the socket.
-        int bytes_sent = rudp_send(sock, file, strlen(file) + 1, 0);
+        int bytes_sent = rudp_send(sock, file, strlen(file) + 1);
+        printf("22222");
 
         // If the message sending failed, print an error message and return 1.
         // If no data was sent, print an error message and return 1. Only occurs if the connection was closed.

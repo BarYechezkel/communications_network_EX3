@@ -1,6 +1,6 @@
-./RUDP_Receiver -p PORT
+./RUDP_Receiver -p 5060
 
-./RUDP_Sender -ip IP -p PORT
+./RUDP_Sender -ip 127.0.0.1 -p 5060
 
 
 uint16_t length;

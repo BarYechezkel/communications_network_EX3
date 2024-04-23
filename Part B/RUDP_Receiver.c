@@ -43,7 +43,7 @@ void print_statistics(FILE *stats)
 int main(int argc, char *argv[])
 {
     // check if the number of arguments that we get from command line is correcct
-    if (argc != 2)
+    if (argc != 3)
     {
 
         fprintf(stderr, "Usage: %s -p <PORT>\n", argv[0]);
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     ///////paramters
     clock_t start, end;
     double time_taken;
-    int RECEIVER_PORT = atoi(argv[1]);
+    int RECEIVER_PORT = atoi(argv[2]);
     
     int sock = -1; // The variable to store the socket file descriptor.
 
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
 
     // Print a message to the standard output to indicate that a new sender has connected.
-    fprintf(stdout, "Sender %s:%d connected, beginning to receive file...\n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port));
+    fprintf(stdout, "Sender %s:%d connected, beginning to receive file...\n", "127.0.0.1", ntohs(sender.sin_port));
 
     // Create a buffer to store the received message.
     char buffer[BUFFER_SIZE] = {0};
@@ -102,26 +102,33 @@ int main(int argc, char *argv[])
     }
     int run = 1;
     double total_avg_time = 0, total_avg_speed = 0;
-    while (receiver_listen)
+    while (receiver_listen)/////TODO
     {
         size_t total_recv = 0; // the total bytes received so far
         start = clock();       // start measuring the time
 
+
+
         // check if the exit message was received
         int bytes_received = rudp_recv(sock,BUFFER_SIZE);
+        
+
         total_recv += bytes_received;
         if (bytes_received == -1)
         { // check for errors
-            perror("rudp_recv");
-            return 1;
+            perror("rudp_recv faild");
+            return -1;
         }
 
 
         end = clock();
 
 
+
         if (receiver_listen)
         {
+            
+
             printf("File transfer completed.\n");
             // Calculate time taken and average bandwidth
             time_taken = ((double)(end - start)) * 1000 / CLOCKS_PER_SEC_B;                      // in milliseconds
