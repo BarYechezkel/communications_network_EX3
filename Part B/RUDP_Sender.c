@@ -96,19 +96,18 @@ int main(int argc, char *argv[])
                     "Sending message to the receiver: \n");
 
 
-                                printf("444444");
+                                
 
 
     int decision = 0;
-            printf("333333");
+          
 
     do
     {
-        printf("111111111111111");
-
+        
         // Try to send the message to the receiver using the socket.
         int bytes_sent = rudp_send(sock, file, strlen(file) + 1);
-        printf("22222");
+        
 
         // If the message sending failed, print an error message and return 1.
         // If no data was sent, print an error message and return 1. Only occurs if the connection was closed.

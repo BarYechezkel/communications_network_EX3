@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
     }
     int run = 1;
     double total_avg_time = 0, total_avg_speed = 0;
-    while (receiver_listen)/////TODO
+      while (receiver_listen)/////TODO
     {
         size_t total_recv = 0; // the total bytes received so far
         start = clock();       // start measuring the time
@@ -114,6 +114,7 @@ int main(int argc, char *argv[])
         
 
         total_recv += bytes_received;
+        //printf("%d\n",bytes_received);
         if (bytes_received == -1)
         { // check for errors
             perror("rudp_recv faild");
@@ -139,6 +140,12 @@ int main(int argc, char *argv[])
             total_avg_speed += average_bandwidth;
             run++;
         }
+        ////////////////////////////we add yasterday
+        // if(total_recv == BUFFER_SIZE){
+        //    receiver_listen = 0; 
+        //    return;
+        // }
+
 
     }
 

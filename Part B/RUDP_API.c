@@ -121,8 +121,6 @@ int rudp_send(int sock, const void *user_data, size_t size_D)
         {
             // Try to send the message to the server using the created socket and the server structure.
             int bytes_sent = sendto(sock, data_to_send, sizeof(data_to_send), 0, NULL, 0); /// TODO
-            total_bytes_sent += bytes_sent;
-            free(data_to_send);
             if (bytes_sent == -1)
             {
                 printf("sendto() faild");
@@ -261,9 +259,10 @@ int RUDP_connect_sender(int sock, char* ip ,int port)
 // Receive data from a peer.
 int rudp_recv(int sock, int data_size)
 {
-    header packetRCV;
     int total_data_received = 0;
-
+    header packetRCV;
+    
+    
     do
     {
         // int num_of_packets_to_rcv = data_size / Buffer;
@@ -296,13 +295,19 @@ int rudp_recv(int sock, int data_size)
             printf("send_ack() faild");
         }
 
-        total_data_received += packetRCV.length_data;
+        total_data_received = total_data_received + packetRCV.length_data;
+        
+        printf("length data %d\n",packetRCV.length_data);
+        printf("%d\n",total_data_received);
+       // printf("total2 :%d\n",total2);
         free(data_to_recv);
 
     } while (packetRCV.flags == DATA);
     // int bytes_received = recvfrom(sock, &packetRCV, sizeof(header), 0, NULL, 0);
     if (packetRCV.flags == END)
     {
+
+    
         printf("Received %d bytes", total_data_received);
     }
 
@@ -382,7 +387,7 @@ int wait_for_ACK(int socket, int seq_num, clock_t start_time, int timeout)
         }
         if (packetRCV.sequence_number == seq_num && packetRCV.flags == ACK)
         {
-            printf("got ACK for packet number: %d", seq_num);
+            printf("got ACK for packet number: %d\n", seq_num);
             return 1;
         }
     }
