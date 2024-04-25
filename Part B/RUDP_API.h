@@ -9,6 +9,10 @@
 
 
 
+#define FAIL -1
+#define SUCCESS 1
+
+
 #define SYN 1
 #define ACK 2
 #define DATA 3

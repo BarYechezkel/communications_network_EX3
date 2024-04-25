@@ -76,7 +76,7 @@ int rudp_send(int sock, const void *user_data, size_t size_D)
         if (data_to_send == NULL)
         {
             printf("FAILURE ALOCTION");
-            exit(1);
+            return -1;
         }
 
         // Copy header and user data into data_to_send
@@ -256,7 +256,7 @@ int RUDP_connect_sender(int sock, char* ip ,int port)
     return 1;
 }
 
-// Receive data from a peer.
+//Receive data from a peer.
 int rudp_recv(int sock, int data_size)
 {
     int total_data_received = 0;
@@ -298,8 +298,7 @@ int rudp_recv(int sock, int data_size)
         total_data_received = total_data_received + packetRCV.length_data;
         
         printf("length data %d\n",packetRCV.length_data);
-        printf("%d\n",total_data_received);
-       // printf("total2 :%d\n",total2);
+        printf("total recive:%d\n",total_data_received);
         free(data_to_recv);
 
     } while (packetRCV.flags == DATA);
@@ -307,8 +306,8 @@ int rudp_recv(int sock, int data_size)
     if (packetRCV.flags == END)
     {
 
-    
-        printf("Received %d bytes", total_data_received);
+       printf("all the the meesege recived");
+       
     }
 
     if (packetRCV.flags == FIN)
@@ -319,16 +318,78 @@ int rudp_recv(int sock, int data_size)
         int check = sendto(sock, &packetFIN_ACK, sizeof(packetFIN_ACK), 0, NULL, 0);
         if (check == -1)
         {
-            printf("sendto() FAILD");
+            printf("sendto() FAILD\n");
             return -1;
         }
     }
 
     return total_data_received;
 }
+// int rudp_recv(int sock, int data_size) {
+//     int total_data_received = 0;
+//     header packetRCV;
+    
+//     // Initialize packetRCV flags to DATA or appropriate start condition
+//     packetRCV.flags = DATA; // Assuming starting with DATA packets
 
-// Closes a connection between peers.
-int rudp_close(int sock)
+//     do {
+//         memset(&packetRCV, 0, sizeof(packetRCV));
+//         void *data_to_recv = malloc(sizeof(packetRCV) + Buffer);
+//         if (data_to_recv == NULL) {
+//             printf("Memory allocation failed");
+//             return -1;
+//         }
+        
+//         int bytes_received = recvfrom(sock, data_to_recv, sizeof(header) + Buffer, 0, NULL, 0);
+//         if (bytes_received == -1) {
+//             printf("recvfrom() failed");
+//             free(data_to_recv);
+//             return -1;
+//         }
+
+//         int cal_check = calculate_checksum(data_to_recv + sizeof(header), sizeof(Buffer));
+//         memcpy(&packetRCV, data_to_recv, sizeof(packetRCV));
+
+//         // if (cal_check != packetRCV.checksum) {
+//         //     printf("Checksum invalid");
+//         //     free(data_to_recv);
+//         //     return -1;
+//         // }
+
+//         if (send_ack(sock, packetRCV) == -1) {
+//             printf("send_ack() failed");
+//         }
+
+//         total_data_received += packetRCV.length_data;
+//         printf("Length data recieved : %d\n", packetRCV.length_data);
+//        // printf("Total received: %d\n", total_data_received);
+
+//         free(data_to_recv);
+
+//     } while (packetRCV.flags == DATA);
+
+//     // Handle END or FIN conditions outside the loop
+//     if (packetRCV.flags == END) {
+//         printf("all the the meesege recived");
+//       // printf("recieved %d bytes",total_data_received);
+//     }
+
+//     if (packetRCV.flags == FIN) {
+//         header packetFIN_ACK;
+//         memset(&packetFIN_ACK, 0, sizeof(packetFIN_ACK));
+//         packetFIN_ACK.flags = FIN_ACK;
+//         int check = sendto(sock, &packetFIN_ACK, sizeof(packetFIN_ACK), 0, NULL, 0);
+//         if (check == -1) {
+//             printf("sendto() failed\n");
+//             return -1;
+//         }
+//     }
+
+//     return total_data_received;
+//}
+
+// // Closes a connection between peers.
+ int rudp_close(int sock)
 {
     header packetCLOSE;
     memset(&packetCLOSE, 0, sizeof(packetCLOSE));

@@ -16,14 +16,13 @@
  */
 #define MAX_SENDERS 1
 
-/*
- * @brief The buffer size to store the received message.
- * @note The default buffer size is 1024.
- */
-// #define BUFFER_SIZE 1024
+ /*
+  * @brief The buffer size to store the received message.
+  * @note The default buffer size is 1024.
+  */
 #define BUFFER_SIZE 2097152
 
-void print_statistics(FILE *stats)
+void print_statistics(FILE* stats)
 {
     printf("----------------------------------\n");
     printf("- * Statistics * -\n");
@@ -40,7 +39,7 @@ void print_statistics(FILE *stats)
  * @param None
  * @return 0 if the Receiver runs successfully, 1 otherwise.
  */
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // check if the number of arguments that we get from command line is correcct
     if (argc != 3)
@@ -54,7 +53,7 @@ int main(int argc, char *argv[])
     clock_t start, end;
     double time_taken;
     int RECEIVER_PORT = atoi(argv[2]);
-    
+
     int sock = -1; // The variable to store the socket file descriptor.
 
     struct sockaddr_in receiver; // The variable to store the receiver's address.
@@ -77,8 +76,8 @@ int main(int argc, char *argv[])
     }
 
 
- int connect_recieve = RUDP_connect_reciever(sock,RECEIVER_PORT);
- if (connect_recieve == -1)
+    int connect_recieve = RUDP_connect_reciever(sock, RECEIVER_PORT);
+    if (connect_recieve == -1)
     {
         perror("connect receiver error");
         return 1;
@@ -89,12 +88,12 @@ int main(int argc, char *argv[])
     fprintf(stdout, "Sender %s:%d connected, beginning to receive file...\n", "127.0.0.1", ntohs(sender.sin_port));
 
     // Create a buffer to store the received message.
-    char buffer[BUFFER_SIZE] = {0};
+    char buffer[BUFFER_SIZE] = { 0 };
 
     int receiver_listen = 1;
-    char *exit_message = "Sender close the connection";
+    char* exit_message = "Sender close the connection";
 
-    FILE *stats_file = fopen("stats", "w+");
+    FILE* stats_file = fopen("stats", "w+");
     if (stats_file == NULL)
     {
         printf("error when open file");
@@ -102,16 +101,17 @@ int main(int argc, char *argv[])
     }
     int run = 1;
     double total_avg_time = 0, total_avg_speed = 0;
-      while (receiver_listen)/////TODO
+    size_t total_recv = 0; // the total bytes received so far
+    while (receiver_listen)/////TODO
     {
-        size_t total_recv = 0; // the total bytes received so far
+        
         start = clock();       // start measuring the time
 
 
 
         // check if the exit message was received
-        int bytes_received = rudp_recv(sock,BUFFER_SIZE);
-        
+        int bytes_received = rudp_recv(sock, BUFFER_SIZE);
+
 
         total_recv += bytes_received;
         //printf("%d\n",bytes_received);
@@ -128,9 +128,9 @@ int main(int argc, char *argv[])
 
         if (receiver_listen)
         {
-            
 
-            printf("File transfer completed.\n");
+
+           // printf("File transfer completed.\n");
             // Calculate time taken and average bandwidth
             time_taken = ((double)(end - start)) * 1000 / CLOCKS_PER_SEC_B;                      // in milliseconds
             double average_bandwidth = (total_recv / (1024.0 * 1024.0)) / (time_taken / 1000.0); // in MB/s
@@ -141,17 +141,17 @@ int main(int argc, char *argv[])
             run++;
         }
         ////////////////////////////we add yasterday
-        // if(total_recv == BUFFER_SIZE){
-        //    receiver_listen = 0; 
-        //    return;
-        // }
+        if(total_recv >= BUFFER_SIZE){
+           receiver_listen = 0; 
+        }
 
 
     }
+     printf(" got total recv: %d\n",total_recv);
 
-    fprintf(stats_file," Average time: %f S\n", total_avg_time/(run-1));
-    fprintf(stats_file," Average speed: %f S\n", total_avg_speed/(run-1));
-    
+    fprintf(stats_file, " Average time: %f S\n", total_avg_time / (run - 1));
+    fprintf(stats_file, " Average speed: %f S\n", total_avg_speed / (run - 1));
+
     print_statistics(stats_file);
 
     // Close the file
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
     remove("stats");
     // Close the sender's socket and continue to the next iteration.
     //close(sender_sock);
-    fprintf(stdout, "Sender %s:%d disconnected\n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port));
+    fprintf(stdout, "Sender %s:%d disconnected\n", "127.0.0.1", ntohs(sender.sin_port));
     fprintf(stdout, "Receiver finished!\n");
 
     return 0;
