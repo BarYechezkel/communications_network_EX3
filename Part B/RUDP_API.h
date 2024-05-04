@@ -31,6 +31,8 @@ typedef struct RUDP_header{
     int sequence_number;
     int checksum;
     int flags;
+    char data[Buffer];
+
 
 }header , *pheader;
 

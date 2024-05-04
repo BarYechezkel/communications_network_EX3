@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <netinet/tcp.h>
 #include <time.h>
+#include "RUDP_API.h"
+
 
 #define TIMEOUT 1 // Timeout in seconds
 
@@ -16,22 +18,22 @@
 #define BUFFER_SIZE 1024
 #define FILE_SIZE 2097152 // 2MB
 
-char *util_generate_random_data(unsigned int size);
+char* util_generate_random_data(unsigned int size);
 
 /*
  * @brief A random data generator function based on srand() and rand().
  * @param size The size of the data to generate (up to 2^32 bytes).
  * @return A pointer to the buffer.
  */
-char *util_generate_random_data(unsigned int size)
+char* util_generate_random_data(unsigned int size)
 {
-    char *buffer = NULL;
+    char* buffer = NULL;
 
     // Argument check.
     if (size == 0)
         return NULL;
 
-    buffer = (char *)calloc(size, sizeof(char));
+    buffer = (char*)calloc(size, sizeof(char));
 
     // Error checking.
     if (buffer == NULL)
@@ -50,7 +52,7 @@ char *util_generate_random_data(unsigned int size)
  * TCP Sender main function.
  * return 0 if the Sender runs successfully, 1 otherwise.
  */
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // check if the number of arguments that we get from command line is correcct
     if (argc != 5)
@@ -59,7 +61,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     ///////paramters
-    char *RECIEVER_IP = argv[2];
+    char* RECIEVER_IP = argv[2];
     int RECIEVER_PORT = atoi(argv[4]);
 
     // The variable to store the socket file descriptor.
@@ -68,10 +70,10 @@ int main(int argc, char *argv[])
 
     // Create a file to send to the receiver.
     //////////////////////////////////////////////////////////////////////////////////////
-    char *file = util_generate_random_data(FILE_SIZE);
+    char* file = util_generate_random_data(FILE_SIZE);
     //////////////////////////////////////////////////////////////////////////////////////
 
-    
+
 
     // Try to create a RUDP socket (IPv4, stream-based, default protocol).
     sock = rudp_sockets();
@@ -85,7 +87,7 @@ int main(int argc, char *argv[])
 
     fprintf(stdout, "Connecting to %s:%d...\n", RECIEVER_IP, RECIEVER_PORT);
 
-    if (RUDP_connect_sender(sock, RECIEVER_IP,RECIEVER_PORT) < 0)
+    if (RUDP_connect_sender(sock, RECIEVER_IP, RECIEVER_PORT) < 0)
     {
         perror("connect(2)");
         close(sock);
@@ -93,21 +95,20 @@ int main(int argc, char *argv[])
     }
 
     fprintf(stdout, "Successfully connected to the receiver!\n"
-                    "Sending message to the receiver: \n");
+        "Sending message to the receiver: \n");
 
 
-                                
+
 
 
     int decision = 0;
-          
 
     do
     {
-        
+
         // Try to send the message to the receiver using the socket.
-        int bytes_sent = rudp_send(sock, file, strlen(file) + 1);
-        
+        int bytes_sent = rudp_send(sock, file, strlen(file)+1);
+        //printf("byte sent %d\n",bytes_sent);
 
         // If the message sending failed, print an error message and return 1.
         // If no data was sent, print an error message and return 1. Only occurs if the connection was closed.
@@ -122,7 +123,9 @@ int main(int argc, char *argv[])
 
         printf("Do you want to send the file again?\n   No - press 0\n   Yes- press 1\n");
         scanf("%d", &decision);
+       
     } while (decision);
+
 
     rudp_close(sock);
 

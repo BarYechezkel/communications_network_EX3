@@ -54,21 +54,19 @@ int main(int argc, char* argv[])
     double time_taken;
     int RECEIVER_PORT = atoi(argv[2]);
 
-    int sock = -1; // The variable to store the socket file descriptor.
+   
+    // struct sockaddr_in receiver; // The variable to store the receiver's address.
 
-    struct sockaddr_in receiver; // The variable to store the receiver's address.
+    // struct sockaddr_in sender; // The variable to store the sender's address.
 
-    struct sockaddr_in sender; // The variable to store the sender's address.
-
-    socklen_t sender_len = sizeof(sender); // Stores the sender's structure length.
+    //socklen_t sender_len = sizeof(sender); // Stores the sender's structure length.
 
     // Reset the receiver and sender structures to zeros.
-    memset(&receiver, 0, sizeof(receiver));
-    memset(&sender, 0, sizeof(sender));
+    // memset(&receiver, 0, sizeof(receiver));
+    // memset(&sender, 0, sizeof(sender));
 
     // Try to create a TCP socket (IPv4, stream-based, default protocol).
-    sock = rudp_sockets();
-
+    int sock = rudp_sockets();
     if (sock == -1)
     {
         perror("socket(2)");
@@ -83,15 +81,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-
-    // Print a message to the standard output to indicate that a new sender has connected.
-    fprintf(stdout, "Sender %s:%d connected, beginning to receive file...\n", "127.0.0.1", ntohs(sender.sin_port));
-
-    // Create a buffer to store the received message.
-    char buffer[BUFFER_SIZE] = { 0 };
-
-    int receiver_listen = 1;
-    char* exit_message = "Sender close the connection";
+    
+    //char* exit_message = "Sender close the connection";
 
     FILE* stats_file = fopen("stats", "w+");
     if (stats_file == NULL)
@@ -102,19 +93,17 @@ int main(int argc, char* argv[])
     int run = 1;
     double total_avg_time = 0, total_avg_speed = 0;
     size_t total_recv = 0; // the total bytes received so far
+
+    int receiver_listen = 1;
+
     while (receiver_listen)/////TODO
     {
-        
         start = clock();       // start measuring the time
-
-
-
         // check if the exit message was received
         int bytes_received = rudp_recv(sock, BUFFER_SIZE);
-
-
+        printf(" got total recv: %d\n",bytes_received);
         total_recv += bytes_received;
-        //printf("%d\n",bytes_received);
+        
         if (bytes_received == -1)
         { // check for errors
             perror("rudp_recv faild");
@@ -124,8 +113,7 @@ int main(int argc, char* argv[])
 
         end = clock();
 
-
-
+    }
         if (receiver_listen)
         {
 
@@ -146,8 +134,8 @@ int main(int argc, char* argv[])
         }
 
 
-    }
-     printf(" got total recv: %d\n",total_recv);
+    
+     //printf(" got total recv: %d\n",(int)total_recv);
 
     fprintf(stats_file, " Average time: %f S\n", total_avg_time / (run - 1));
     fprintf(stats_file, " Average speed: %f S\n", total_avg_speed / (run - 1));
@@ -159,7 +147,7 @@ int main(int argc, char* argv[])
     remove("stats");
     // Close the sender's socket and continue to the next iteration.
     //close(sender_sock);
-    fprintf(stdout, "Sender %s:%d disconnected\n", "127.0.0.1", ntohs(sender.sin_port));
+    fprintf(stdout, "Sender ip%s port:%d disconnected\n", "127.0.0.1", 5060);
     fprintf(stdout, "Receiver finished!\n");
 
     return 0;

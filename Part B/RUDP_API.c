@@ -21,15 +21,17 @@ int rudp_sockets()
     if (rudp_socket == -1)
     {
         perror("fail to create socket ");
-        return -1; // error
+        return FAIL; // error
     }
     return rudp_socket; // code discriptor //////////////////
 }
 
-unsigned short int calculate_checksum(void *data, unsigned int bytes)
+unsigned short int calculate_checksum(void* data, unsigned int bytes)
 {
-    unsigned short int *data_pointer = (unsigned short int *)data;
+    unsigned short int* data_pointer = (unsigned short int*)data;
     unsigned int total_sum = 0;
+
+    if(bytes == 0){return 0;}
 
     // Main summing loop
     while (bytes > 1)
@@ -40,7 +42,7 @@ unsigned short int calculate_checksum(void *data, unsigned int bytes)
 
     // Add left-over byte, if any
     if (bytes > 0)
-        total_sum += *((unsigned char *)data_pointer);
+        total_sum += *((unsigned char*)data_pointer);
 
     // Fold 32-bit sum to 16 bits
     while (total_sum >> 16)
@@ -53,7 +55,7 @@ unsigned short int calculate_checksum(void *data, unsigned int bytes)
 // acknowledgment packet, and if it didn’t receive any, retransmits the data.
 
 // just to send data!
-int rudp_send(int sock, const void *user_data, size_t size_D)
+int rudp_send(int sock, const void* user_data, size_t size_D)
 {
     int sq = 0;
     /////////////////////////////////////////////////
@@ -64,38 +66,33 @@ int rudp_send(int sock, const void *user_data, size_t size_D)
     // calculate the size of the last packet
     int rest_data = size_D - packet_count * Buffer;
 
+
     for (int i = 0; i < packet_count; i++)
     {
         header packet;
         packet.length_data = Buffer;
         packet.flags = DATA;
-        packet.sequence_number = sq++; ////////////////
-        packet.checksum = 0;
+        packet.sequence_number = sq++; ////////////////TODO
+        memcpy(packet.data, user_data + i * Buffer, Buffer);
+        packet.checksum = calculate_checksum(packet.data, packet.length_data);
 
-        void *data_to_send = (void *)malloc(sizeof(header) + Buffer);
-        if (data_to_send == NULL)
-        {
-            printf("FAILURE ALOCTION");
-            return -1;
-        }
 
-        // Copy header and user data into data_to_send
-        memcpy(data_to_send, &packet, sizeof(header));
-        memcpy(data_to_send + sizeof(header), user_data, sizeof(Buffer));
-        packet.checksum = calculate_checksum(data_to_send + sizeof(header), sizeof(Buffer));
+
         do
         {
             // Try to send the message to the server using the created socket and the server structure.
-            int bytes_sent = sendto(sock, data_to_send, sizeof(data_to_send), 0, NULL, 0);
+            int bytes_sent = sendto(sock, &packet, sizeof(header), 0, NULL, 0);
             if (bytes_sent == -1)
             {
                 printf("sendto() faild");
-                return -1;
+                // free(data_to_send);
+                return FAIL;
             }
-            total_bytes_sent += bytes_sent;
-            free(data_to_send);
+            total_bytes_sent += packet.length_data;
+
         } while (wait_for_ACK(sock, packet.sequence_number, clock(), TIME_OUT) < 0);
     }
+    // free(data_to_send);
 
     if (rest_data > 0)
     {
@@ -104,31 +101,24 @@ int rudp_send(int sock, const void *user_data, size_t size_D)
         packet.length_data = rest_data;
         packet.flags = DATA;
         packet.sequence_number = sq++; ////////////////
-        packet.checksum = 0;
+        memcmp(packet.data, user_data + packet_count * Buffer, rest_data);
+        packet.checksum = calculate_checksum(packet.data, packet.length_data);
 
-        void *data_to_send = (void *)malloc(sizeof(header) + rest_data);
-        if (data_to_send == NULL)
-        {
-            printf("FAILURE ALOCTION");
-            exit(1);
-        }
 
-        // Copy header and user data into data_to_send
-        memcpy(data_to_send, &packet, sizeof(header));
-        memcpy(data_to_send + sizeof(header), user_data, rest_data);
-        packet.checksum = calculate_checksum(data_to_send + sizeof(header), sizeof(rest_data));
+        // packet.checksum = calculate_checksum(data_to_send + sizeof(header), sizeof(rest_data));
         do
         {
             // Try to send the message to the server using the created socket and the server structure.
-            int bytes_sent = sendto(sock, data_to_send, sizeof(data_to_send), 0, NULL, 0); /// TODO
+            int bytes_sent = sendto(sock, &packet, sizeof(header), 0, NULL, 0); /// TODO
             if (bytes_sent == -1)
             {
                 printf("sendto() faild");
-                return -1;
+                return FAIL;
             }
-            total_bytes_sent += bytes_sent;
-            free(data_to_send);
+            total_bytes_sent += packet.length_data;
+
         } while (wait_for_ACK(sock, packet.sequence_number, clock(), TIME_OUT) < 0);
+
     }
     // finish sending
     header packetEND;
@@ -136,12 +126,14 @@ int rudp_send(int sock, const void *user_data, size_t size_D)
     packetEND.flags = END;
     packetEND.sequence_number = 0;
     packetEND.checksum = 0;
-    int bytes_sent = sendto(sock, &packetEND, sizeof(packetEND), 0, NULL, 0); 
+    //printf("before send to -End");
+    int bytes_sent = sendto(sock, &packetEND, sizeof(header), 0, NULL, 0);
+    printf("after send to -End\n");
     if (bytes_sent == -1)
     {
         perror("sendto() failed");
         close(sock);
-        return -1;
+        return FAIL;
     }
     return total_bytes_sent;
 }
@@ -154,33 +146,36 @@ int RUDP_connect_reciever(int sock, int port)
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(port);
     serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    int bind_Sock = bind(sock, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
+    int bind_Sock = bind(sock, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
     if (bind_Sock == -1)
     {
         perror("bind() failed");
         close(sock);
-        return -1;
+        return FAIL;
     }
     // receive SYN message
     struct sockaddr_in sender_address;
     memset(&sender_address, 0, sizeof(sender_address));
-     socklen_t sender_address_len = sizeof(sender_address);
+    socklen_t sender_address_len = sizeof(sender_address);
     header packetRecv;
-    int bytes_received = recvfrom(sock, &packetRecv, sizeof(packetRecv), 0, 
-    (struct sockaddr*)&sender_address, &sender_address_len);
+    int bytes_received = recvfrom(sock, &packetRecv, sizeof(packetRecv), 0,
+        (struct sockaddr*)&sender_address, &sender_address_len);
 
     if (bytes_received == EOF)
     {
         perror("recvfrom failed");
-        return -1;
+        return FAIL;
     }
 
-    if (connect(sock, (struct sockaddr *)&sender_address, sizeof(sender_address)) == -1)
+    if (connect(sock, (struct sockaddr*)&sender_address, sizeof(sender_address)) == -1)
     {
 
         perror("connect() failed");
-        return -1;
+        return FAIL;
     }
+    // Print a message to the standard output to indicate that a new sender has connected.
+    fprintf(stdout, "Sender %s:%d connected, beginning to receive file...\n", inet_ntoa(sender_address.sin_addr), ntohs(sender_address.sin_port));
+
 
     if (packetRecv.flags == SYN)
     {
@@ -191,69 +186,68 @@ int RUDP_connect_reciever(int sock, int port)
         if (sendResult == -1)
         {
             printf("sendto() failed");
-            return -1;
+            return FAIL;
         }
-            // set_timeout(sock, TIME_OUT * 10);
+        // set_timeout(sock, TIME_OUT * 10);
 
     }
-
 
     return 1;
 }
 
-int RUDP_connect_sender(int sock, char* ip ,int port)
+int RUDP_connect_sender(int sock, char* ip, int port)
 {
 
-// setup a timeout for the socket
-//   if (set_timeout(socket, TIME_OUT) == -1) {
-//     return -1;
-//   }
-  // Setup the server address structure.
-  struct sockaddr_in reciver_address;
-  memset(&reciver_address, 0, sizeof(reciver_address));
-  reciver_address.sin_family = AF_INET;
-  reciver_address.sin_port = htons(port);
-  int rval = inet_pton(AF_INET, (char*)ip, &reciver_address.sin_addr);
-  if (rval <= 0) {
-    printf("inet_pton() failed");
-    return -1;
+    // setup a timeout for the socket
+    //   if (set_timeout(socket, TIME_OUT) == -1) {
+    //     return -1;
+    //   }
+      // Setup the server address structure.
+    struct sockaddr_in reciver_address;
+    memset(&reciver_address, 0, sizeof(reciver_address));
+    reciver_address.sin_family = AF_INET;
+    reciver_address.sin_port = htons(port);
+    int rval = inet_pton(AF_INET, (char*)ip, &reciver_address.sin_addr);
+    if (rval <= 0) {
+        printf("inet_pton() failed");
+        return FAIL;
 
 
-    //inet_pton(AF_INET, RECIEVER_IP, &receiver.sin_addr) <= 0)
-  }
+        //inet_pton(AF_INET, RECIEVER_IP, &receiver.sin_addr) <= 0)
+    }
 
     header packetSYN;
-     memset(&packetSYN, 0, sizeof(packetSYN));
+    memset(&packetSYN, 0, sizeof(packetSYN));
     packetSYN.flags = SYN;
 
     header packetAck;
     memset(&packetAck, 0, sizeof(packetAck));
 
-    if (connect(sock, (struct sockaddr *)&reciver_address, sizeof(reciver_address)) == -1)
+    if (connect(sock, (struct sockaddr*)&reciver_address, sizeof(reciver_address)) == -1)
     {
         printf("connect failed");
-        return -1;
+        return FAIL;
     }
 
     int bytes_SYN_sent = sendto(sock, &packetSYN, sizeof(packetSYN), 0, NULL, 0);
     if (bytes_SYN_sent == EOF)
     {
         printf("sendto failed");
-        return -1;
+        return FAIL;
     }
 
     int bytes_received = recvfrom(sock, &packetAck, sizeof(packetAck), 0, NULL, 0);
     if (bytes_received == EOF)
     {
         printf("recvfrom failed");
-        return -1;
+        return FAIL;
     }
     if (packetAck.flags == ACK)
     {
         printf("connected complited\n");
-        return 1;
+        return SUCCESS;
     }
-    return 1;
+    return SUCCESS;
 }
 
 //Receive data from a peer.
@@ -261,28 +255,23 @@ int rudp_recv(int sock, int data_size)
 {
     int total_data_received = 0;
     header packetRCV;
-    
-    
+    int i = 0;//count 
     do
     {
-        // int num_of_packets_to_rcv = data_size / Buffer;
         memset(&packetRCV, 0, sizeof(packetRCV)); // put zero in header we are created
-        void *data_to_recv = malloc(sizeof(packetRCV) + Buffer);
-        if (data_to_recv == NULL)
-        {
-            printf("Memory allocation failed");
-            return -1;
-        }
-        int bytes_received = recvfrom(sock, data_to_recv, sizeof(header) + Buffer, 0, NULL, 0);
-         if (bytes_received == -1)
+        int bytes_received = recvfrom(sock, &packetRCV, Buffer, 0, NULL, 0);
+        if (bytes_received == -1)
         {
             printf("recvfrom() FAILD");
-            return -1;
+            return FAIL;
         }
 
 
-        int cal_check = calculate_checksum(data_to_recv + sizeof(header), sizeof(Buffer));
-        memcpy(&packetRCV, data_to_recv, sizeof(packetRCV));
+        //int cal_check = calculate_checksum(data_to_recv + sizeof(header), sizeof(Buffer));////TODO
+        printf("i got %d\n", packetRCV.flags);
+        printf("i got length data of packet%d\n", packetRCV.length_data);
+        printf("i got sq%d\n", packetRCV.sequence_number);
+
 
         // if (cal_check != packetRCV.checksum)//////////////////////TODO
         // {
@@ -290,149 +279,93 @@ int rudp_recv(int sock, int data_size)
         //     return -1;
         // }
 
-        if (send_ack(sock, packetRCV) == -1)
-        {
-            printf("send_ack() faild");
-        }
+         printf("one %d\n",packetRCV.checksum);
+         printf("two %d\n",calculate_checksum(packetRCV.data,packetRCV.length_data));
+
+
+
+        // if (packetRCV.checksum == calculate_checksum(packetRCV.data,packetRCV.length_data)) 
+        // {
+            printf("okkkkkkkkkkkk");
+            if (send_ack(sock, packetRCV) == -1)
+            {
+                printf("send_ack() faild");
+                //return FAIL;/////////////////TODO
+            }
+    //   }
 
         total_data_received = total_data_received + packetRCV.length_data;
-        
-        printf("length data %d\n",packetRCV.length_data);
-        printf("total recive:%d\n",total_data_received);
-        free(data_to_recv);
+
+        printf("length data %d number %d\n", packetRCV.length_data, i++);
+        if (packetRCV.flags == END)
+        {
+            printf("i got END of packet num %d", i);
+        }
 
     } while (packetRCV.flags == DATA);
     // int bytes_received = recvfrom(sock, &packetRCV, sizeof(header), 0, NULL, 0);
-    if (packetRCV.flags == END)
-    {
-
-       printf("all the the meesege recived");
-       
-    }
 
     if (packetRCV.flags == FIN)
     {
+        printf("i got FINnnnnnnnnnn");
+
         header packetFIN_ACK;
         memset(&packetFIN_ACK, 0, sizeof(packetFIN_ACK));
         packetFIN_ACK.flags = FIN_ACK;
-        int check = sendto(sock, &packetFIN_ACK, sizeof(packetFIN_ACK), 0, NULL, 0);
+        int check = sendto(sock, &packetFIN_ACK, sizeof(header), 0, NULL, 0);
         if (check == -1)
         {
             printf("sendto() FAILD\n");
-            return -1;
+            return FAIL;
         }
+
+        close(sock);
+
+
     }
 
     return total_data_received;
 }
-// int rudp_recv(int sock, int data_size) {
-//     int total_data_received = 0;
-//     header packetRCV;
-    
-//     // Initialize packetRCV flags to DATA or appropriate start condition
-//     packetRCV.flags = DATA; // Assuming starting with DATA packets
 
-//     do {
-//         memset(&packetRCV, 0, sizeof(packetRCV));
-//         void *data_to_recv = malloc(sizeof(packetRCV) + Buffer);
-//         if (data_to_recv == NULL) {
-//             printf("Memory allocation failed");
-//             return -1;
-//         }
-        
-//         int bytes_received = recvfrom(sock, data_to_recv, sizeof(header) + Buffer, 0, NULL, 0);
-//         if (bytes_received == -1) {
-//             printf("recvfrom() failed");
-//             free(data_to_recv);
-//             return -1;
-//         }
-
-//         int cal_check = calculate_checksum(data_to_recv + sizeof(header), sizeof(Buffer));
-//         memcpy(&packetRCV, data_to_recv, sizeof(packetRCV));
-
-//         // if (cal_check != packetRCV.checksum) {
-//         //     printf("Checksum invalid");
-//         //     free(data_to_recv);
-//         //     return -1;
-//         // }
-
-//         if (send_ack(sock, packetRCV) == -1) {
-//             printf("send_ack() failed");
-//         }
-
-//         total_data_received += packetRCV.length_data;
-//         printf("Length data recieved : %d\n", packetRCV.length_data);
-//        // printf("Total received: %d\n", total_data_received);
-
-//         free(data_to_recv);
-
-//     } while (packetRCV.flags == DATA);
-
-//     // Handle END or FIN conditions outside the loop
-//     if (packetRCV.flags == END) {
-//         printf("all the the meesege recived");
-//       // printf("recieved %d bytes",total_data_received);
-//     }
-
-//     if (packetRCV.flags == FIN) {
-//         header packetFIN_ACK;
-//         memset(&packetFIN_ACK, 0, sizeof(packetFIN_ACK));
-//         packetFIN_ACK.flags = FIN_ACK;
-//         int check = sendto(sock, &packetFIN_ACK, sizeof(packetFIN_ACK), 0, NULL, 0);
-//         if (check == -1) {
-//             printf("sendto() failed\n");
-//             return -1;
-//         }
-//     }
-
-//     return total_data_received;
-//}
-
-// // Closes a connection between peers.
- int rudp_close(int sock)
+// Closes a connection between peers.
+int rudp_close(int sock)
 {
     header packetCLOSE;
     memset(&packetCLOSE, 0, sizeof(packetCLOSE));
     packetCLOSE.flags = FIN;
     do
     {
-        int check = sendto(sock, &packetCLOSE, sizeof(packetCLOSE), 0, NULL, 0);
+        int check = sendto(sock, &packetCLOSE, sizeof(header), 0, NULL, 0);
         if (check == -1)
         {
             printf("sendto() FAILD");
-            return -1;
+            return FAIL;
         }
-    } while (wait_for_ACK(sock, packetCLOSE.sequence_number, clock(), TIME_OUT) < 0);
+    } while (wait_for_FIN_ACK(sock, packetCLOSE.sequence_number, clock(), TIME_OUT) < 0);
     close(sock);
-    printf("The connection ended successfully");
-    return 1;
+    printf("The connection ended successfully\n");
+    return SUCCESS;
 }
 
 int send_ack(int socket, header packet) // for data
 {
     header ack_packet;
     memset(&ack_packet, 0, sizeof(header));
-    ack_packet.flags = ACK;
-    //   if (packet->flags.FIN == 1) {
-    //     ack_packet->flags.FIN = 1;
-    //   }
-    //   if (packet->flags.SYN == 1) {
-    //     ack_packet->flags.SYN = 1;
-    //   }
-    if (packet.flags == DATA)
+
+    if (packet.flags == DATA) 
     {
         ack_packet.flags = ACK;
+
+        ack_packet.sequence_number = packet.sequence_number; // same sq
+        // ack_packet->checksum = checksum(ack_packet);
+        int sendResult = sendto(socket, &ack_packet, sizeof(header), 0, NULL, 0);
+        if (sendResult == -1)
+        {
+            printf("sendto() failed ");
+            return FAIL;
+        }
     }
-    ack_packet.sequence_number = packet.sequence_number; // same sq
-    // ack_packet->checksum = checksum(ack_packet);
-    int sendResult = sendto(socket, &ack_packet, sizeof(header), 0, NULL, 0);
-    if (sendResult == -1)
-    {
-        printf("sendto() failed ");
-        return -1;
-    }
-    // free(ack_packet);
-    return 1;
+    return SUCCESS;
 }
 
 int wait_for_ACK(int socket, int seq_num, clock_t start_time, int timeout)
@@ -444,12 +377,12 @@ int wait_for_ACK(int socket, int seq_num, clock_t start_time, int timeout)
         if (bytes_recive == -1)
         {
             printf("recivefrom() failed");
-            return -1;
+            return FAIL;
         }
         if (packetRCV.sequence_number == seq_num && packetRCV.flags == ACK)
         {
             printf("got ACK for packet number: %d\n", seq_num);
-            return 1;
+            return SUCCESS;
         }
     }
     return -1; // timout!
@@ -464,13 +397,13 @@ int wait_for_FIN_ACK(int socket, int seq_num, clock_t start_time, int timeout)
         if (bytes_recive == -1)
         {
             printf("recivefrom() failed");
-            return -1;
+            return FAIL;
         }
         if (packetRCV.sequence_number == seq_num && packetRCV.flags == FIN_ACK)
         {
-            printf("got ACK for packet number: %d", seq_num);
-            return 1;
+            printf("got FINACK for packet number: %d\n", seq_num);
+            return SUCCESS;
         }
     }
-    return -1; // timout!
+    return FAIL; // timout!
 }
