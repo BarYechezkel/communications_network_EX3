@@ -298,6 +298,7 @@ int rudp_recv(int sock, int data_size)
         }
         else
         {
+            
             printf("checksum invalid");
             return FAIL;
         }
