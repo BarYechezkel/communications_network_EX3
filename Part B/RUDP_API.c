@@ -31,7 +31,7 @@ unsigned short int calculate_checksum(void* data, unsigned int bytes)
     unsigned short int* data_pointer = (unsigned short int*)data;
     unsigned int total_sum = 0;
 
-    if(bytes == 0){return 0;}
+    if (bytes == 0) { return 0; }
 
     // Main summing loop
     while (bytes > 1)
@@ -62,6 +62,7 @@ int rudp_send(int sock, const void* user_data, size_t size_D)
 
     int total_bytes_sent = 0;
     int packet_count = (size_D / Buffer);
+    //printf("packet count : %d" , packet_count);
 
     // calculate the size of the last packet
     int rest_data = size_D - packet_count * Buffer;
@@ -76,12 +77,18 @@ int rudp_send(int sock, const void* user_data, size_t size_D)
         memcpy(packet.data, user_data + i * Buffer, Buffer);
         packet.checksum = calculate_checksum(packet.data, packet.length_data);
 
+        //  printf("DATA before: %s\n",packet.data);
+          // printf("check in pakcet: %d\n",packet.checksum);
+          // printf("calculate_checksum: %d\n",calculate_checksum(packet.data, packet.length_data));
 
 
         do
         {
             // Try to send the message to the server using the created socket and the server structure.
             int bytes_sent = sendto(sock, &packet, sizeof(header), 0, NULL, 0);
+
+            // printf("DATA before: %s\n",packet.data);
+
             if (bytes_sent == -1)
             {
                 printf("sendto() faild");
@@ -101,9 +108,11 @@ int rudp_send(int sock, const void* user_data, size_t size_D)
         packet.length_data = rest_data;
         packet.flags = DATA;
         packet.sequence_number = sq++; ////////////////
-        memcmp(packet.data, user_data + packet_count * Buffer, rest_data);
+        memcpy(packet.data, user_data + packet_count * Buffer, rest_data);
         packet.checksum = calculate_checksum(packet.data, packet.length_data);
-
+        // printf("check sum before %d\n",packet.checksum);
+        //  printf("two function: %d\n",calculate_checksum(packet.data,packet.length_data));
+//printf("DATA before: %s\n",packet.data);
 
         // packet.checksum = calculate_checksum(data_to_send + sizeof(header), sizeof(rest_data));
         do
@@ -211,9 +220,6 @@ int RUDP_connect_sender(int sock, char* ip, int port)
     if (rval <= 0) {
         printf("inet_pton() failed");
         return FAIL;
-
-
-        //inet_pton(AF_INET, RECIEVER_IP, &receiver.sin_addr) <= 0)
     }
 
     header packetSYN;
@@ -259,7 +265,7 @@ int rudp_recv(int sock, int data_size)
     do
     {
         memset(&packetRCV, 0, sizeof(packetRCV)); // put zero in header we are created
-        int bytes_received = recvfrom(sock, &packetRCV, Buffer, 0, NULL, 0);
+        int bytes_received = recvfrom(sock, &packetRCV, sizeof(header), 0, NULL, 0);
         if (bytes_received == -1)
         {
             printf("recvfrom() FAILD");
@@ -268,31 +274,34 @@ int rudp_recv(int sock, int data_size)
 
 
         //int cal_check = calculate_checksum(data_to_recv + sizeof(header), sizeof(Buffer));////TODO
-        printf("i got %d\n", packetRCV.flags);
-        printf("i got length data of packet%d\n", packetRCV.length_data);
-        printf("i got sq%d\n", packetRCV.sequence_number);
+        // printf("i got %d\n", packetRCV.flags);
+        // printf("i got length data of packet%d\n", packetRCV.length_data);
+        // printf("i got sq%d\n", packetRCV.sequence_number);
 
+     //   printf("DATA after: %s\n",packetRCV.data);
+        // printf("lenght: %d\n",packetRCV.length_data);
+        // printf("one header:%d\n",packetRCV.checksum);
+        // printf("two function: %d\n",calculate_checksum(packetRCV.data,packetRCV.length_data));
 
-        // if (cal_check != packetRCV.checksum)//////////////////////TODO
-        // {
-        //     printf("checksum invalid");
-        //     return -1;
-        // }
-
-         printf("one %d\n",packetRCV.checksum);
-         printf("two %d\n",calculate_checksum(packetRCV.data,packetRCV.length_data));
+       
 
 
 
-        // if (packetRCV.checksum == calculate_checksum(packetRCV.data,packetRCV.length_data)) 
-        // {
-            printf("okkkkkkkkkkkk");
+        if (packetRCV.checksum == calculate_checksum(packetRCV.data, packetRCV.length_data))
+        {
+
             if (send_ack(sock, packetRCV) == -1)
             {
                 printf("send_ack() faild");
                 //return FAIL;/////////////////TODO
             }
-    //   }
+        }
+        else
+        {
+            printf("checksum invalid");
+            return FAIL;
+        }
+
 
         total_data_received = total_data_received + packetRCV.length_data;
 
@@ -352,7 +361,7 @@ int send_ack(int socket, header packet) // for data
     header ack_packet;
     memset(&ack_packet, 0, sizeof(header));
 
-    if (packet.flags == DATA) 
+    if (packet.flags == DATA)
     {
         ack_packet.flags = ACK;
 
