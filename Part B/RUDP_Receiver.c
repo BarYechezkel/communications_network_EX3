@@ -96,11 +96,17 @@ int main(int argc, char* argv[])
 
     int receiver_listen = 1;
 
-    while (receiver_listen)/////TODO
+    while (receiver_listen)
     {
         start = clock();       // start measuring the time
         // check if the exit message was received
         int bytes_received = rudp_recv(sock, BUFFER_SIZE);
+
+        if (bytes_received == 2)
+        {
+        receiver_listen = 0;
+        }
+        
         printf(" got total recv: %d\n",bytes_received);
         total_recv += bytes_received;
         
@@ -113,33 +119,21 @@ int main(int argc, char* argv[])
 
         end = clock();
 
-    }
-        if (receiver_listen)
-        {
-
-
+    
            // printf("File transfer completed.\n");
             // Calculate time taken and average bandwidth
             time_taken = ((double)(end - start)) * 1000 / CLOCKS_PER_SEC_B;                      // in milliseconds
             double average_bandwidth = (total_recv / (1024.0 * 1024.0)) / (time_taken / 1000.0); // in MB/s
-            fprintf(stats_file, "Run #%d Data: Time=%f S ; Speed=%f MB/S\n", run, time_taken, average_bandwidth);
+            fprintf(stats_file, "Run #%d Data: Time= %f MS ; Speed= %f MB/S\n", run, time_taken, average_bandwidth);
 
             total_avg_time += time_taken;
             total_avg_speed += average_bandwidth;
             run++;
-        }
-        ////////////////////////////we add yasterday
-        if(total_recv >= BUFFER_SIZE){
-           receiver_listen = 0; 
-        }
-
-
-    
-     //printf(" got total recv: %d\n",(int)total_recv);
 
     fprintf(stats_file, " Average time: %f S\n", total_avg_time / (run - 1));
     fprintf(stats_file, " Average speed: %f S\n", total_avg_speed / (run - 1));
-
+    }
+    close_RUDP_recive(sock);
     print_statistics(stats_file);
 
     // Close the file

@@ -261,14 +261,14 @@ int rudp_recv(int sock, int data_size)
 {
     int total_data_received = 0;
     header packetRCV;
-    int i = 0;//count 
+   static int i = 0;//count 
     do
     {
         memset(&packetRCV, 0, sizeof(packetRCV)); // put zero in header we are created
         int bytes_received = recvfrom(sock, &packetRCV, sizeof(header), 0, NULL, 0);
         if (bytes_received == -1)
         {
-            printf("recvfrom() FAILD");
+            printf("recvfrom() FAILD\nhhhhhhhhhhhhhh");
             return FAIL;
         }
 
@@ -297,9 +297,7 @@ int rudp_recv(int sock, int data_size)
             }
         }
         else
-        
         {
-
             printf("checksum invalid");
             return FAIL;
         }
@@ -307,10 +305,10 @@ int rudp_recv(int sock, int data_size)
 
         total_data_received = total_data_received + packetRCV.length_data;
 
-        printf("length data %d number %d\n", packetRCV.length_data, i++);
+       // printf("length data %d number %d\n", packetRCV.length_data, i++);
         if (packetRCV.flags == END)
         {
-            printf("i got END of packet num %d", i);
+            printf("i got END of packet num %d\n", i++);
         }
 
     } while (packetRCV.flags == DATA);
@@ -329,8 +327,8 @@ int rudp_recv(int sock, int data_size)
             printf("sendto() FAILD\n");
             return FAIL;
         }
-
-        close(sock);
+        return 2;
+       
 
 
     }
@@ -353,9 +351,9 @@ int rudp_close(int sock)
             return FAIL;
         }
     } while (wait_for_FIN_ACK(sock, packetCLOSE.sequence_number, clock(), TIME_OUT) < 0);
-    close(sock);
     printf("The connection ended successfully\n");
-    return SUCCESS;
+    return SUCCESS ;
+;
 }
 
 int send_ack(int socket, header packet) // for data
@@ -392,7 +390,7 @@ int wait_for_ACK(int socket, int seq_num, clock_t start_time, int timeout)
         }
         if (packetRCV.sequence_number == seq_num && packetRCV.flags == ACK)
         {
-            printf("got ACK for packet number: %d\n", seq_num);
+          //  printf("got ACK for packet number: %d\n", seq_num);
             return SUCCESS;
         }
     }
@@ -417,4 +415,7 @@ int wait_for_FIN_ACK(int socket, int seq_num, clock_t start_time, int timeout)
         }
     }
     return FAIL; // timout!
+}
+void close_RUDP_recive(int socket){
+close(socket);
 }

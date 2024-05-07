@@ -66,4 +66,4 @@ int wait_for_ACK(int socket, int seq_num, clock_t start_time, int timeout);
 
 int wait_for_FIN_ACK(int socket, int seq_num, clock_t start_time, int timeout);
 
-
+void close_RUDP_recive(int socket);
