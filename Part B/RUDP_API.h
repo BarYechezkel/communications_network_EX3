@@ -44,7 +44,7 @@ int rudp_sockets();
 
 //Sending data to the peer. The function should wait for an 
 //acknowledgment packet, and if it didn’t receive any, retransmits the data.
-int rudp_send(int sock, const void *user_data, size_t size_D);
+int rudp_send(int sock, const void *user_data, size_t size_D,int*arr);
 
 
 int RUDP_connect_sender(int sock, char* ip ,int port);
@@ -54,7 +54,7 @@ int RUDP_connect_reciever(int sock, int port);
 
 
 //Receive data from a peer.
-int rudp_recv(int sock, int data_size);
+int rudp_recv(int sock, int data_size,int*arr);
 
 //Closes a connection between peers. 
 int rudp_close(int sock);
@@ -67,3 +67,5 @@ int wait_for_ACK(int socket, int seq_num, clock_t start_time, int timeout);
 int wait_for_FIN_ACK(int socket, int seq_num, clock_t start_time, int timeout);
 
 void close_RUDP_recive(int socket);
+int set_timeout(int socket, int time) ;
+

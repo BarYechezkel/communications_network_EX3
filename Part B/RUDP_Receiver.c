@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    
+
     //char* exit_message = "Sender close the connection";
 
     FILE* stats_file = fopen("stats", "w+");
@@ -98,9 +98,11 @@ int main(int argc, char* argv[])
 
     while (receiver_listen)
     {
+        int arr [33] ={0};
+
         start = clock();       // start measuring the time
         // check if the exit message was received
-        int bytes_received = rudp_recv(sock, BUFFER_SIZE);
+        int bytes_received = rudp_recv(sock, BUFFER_SIZE,arr);
 
         if (bytes_received == 2)
         {
@@ -119,19 +121,18 @@ int main(int argc, char* argv[])
 
         end = clock();
 
-    
-           // printf("File transfer completed.\n");
+
             // Calculate time taken and average bandwidth
             time_taken = ((double)(end - start)) * 1000 / CLOCKS_PER_SEC_B;                      // in milliseconds
             double average_bandwidth = (total_recv / (1024.0 * 1024.0)) / (time_taken / 1000.0); // in MB/s
-            fprintf(stats_file, "Run #%d Data: Time= %f MS ; Speed= %f MB/S\n", run, time_taken, average_bandwidth);
+            fprintf(stats_file, "Run #%d Data: Time= %f ms ; Speed= %f MB/S\n", run, time_taken, average_bandwidth);
 
             total_avg_time += time_taken;
             total_avg_speed += average_bandwidth;
             run++;
 
-    fprintf(stats_file, " Average time: %f S\n", total_avg_time / (run - 1));
-    fprintf(stats_file, " Average speed: %f S\n", total_avg_speed / (run - 1));
+    fprintf(stats_file, " Average time: %f ms\n", total_avg_time / (run - 1));
+    fprintf(stats_file, " Average speed: %f MB/s\n", total_avg_speed / (run - 1));
     }
     close_RUDP_recive(sock);
     print_statistics(stats_file);
@@ -140,7 +141,6 @@ int main(int argc, char* argv[])
     fclose(stats_file);
     remove("stats");
     // Close the sender's socket and continue to the next iteration.
-    //close(sender_sock);
     fprintf(stdout, "Sender ip%s port:%d disconnected\n", "127.0.0.1", 5060);
     fprintf(stdout, "Receiver finished!\n");
 

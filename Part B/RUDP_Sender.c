@@ -74,7 +74,6 @@ int main(int argc, char* argv[])
     //////////////////////////////////////////////////////////////////////////////////////
 
 
-
     // Try to create a RUDP socket (IPv4, stream-based, default protocol).
     sock = rudp_sockets();
 
@@ -105,9 +104,10 @@ int main(int argc, char* argv[])
 
     do
     {
+     int arr [33] ={0};
 
         // Try to send the message to the receiver using the socket.
-        int bytes_sent = rudp_send(sock, file, strlen(file)+1);
+        int bytes_sent = rudp_send(sock, file, strlen(file)+1,arr);
         //printf("byte sent %d\n",bytes_sent);
 
         // If the message sending failed, print an error message and return 1.
