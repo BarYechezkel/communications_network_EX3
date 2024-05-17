@@ -48,24 +48,15 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Usage: %s -p <PORT>\n", argv[0]);
         return 1;
     }
+    printf("receiver start\n");
 
     ///////paramters
     clock_t start, end;
     double time_taken;
     int RECEIVER_PORT = atoi(argv[2]);
 
-   
-    // struct sockaddr_in receiver; // The variable to store the receiver's address.
 
-    // struct sockaddr_in sender; // The variable to store the sender's address.
-
-    //socklen_t sender_len = sizeof(sender); // Stores the sender's structure length.
-
-    // Reset the receiver and sender structures to zeros.
-    // memset(&receiver, 0, sizeof(receiver));
-    // memset(&sender, 0, sizeof(sender));
-
-    // Try to create a TCP socket (IPv4, stream-based, default protocol).
+    // Try to create a RUDP socket (IPv4, stream-based, default protocol).
     int sock = rudp_sockets();
     if (sock == -1)
     {
@@ -81,9 +72,6 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-
-    //char* exit_message = "Sender close the connection";
-
     FILE* stats_file = fopen("stats", "w+");
     if (stats_file == NULL)
     {
@@ -95,23 +83,22 @@ int main(int argc, char* argv[])
     size_t total_recv = 0; // the total bytes received so far
 
     int receiver_listen = 1;
-
     while (receiver_listen)
     {
-        int arr [33] ={0};
+        int arr[33] = { 0 };
 
         start = clock();       // start measuring the time
         // check if the exit message was received
-        int bytes_received = rudp_recv(sock, BUFFER_SIZE,arr);
-
-        if (bytes_received == 2)
+        int bytes_received = rudp_recv(sock, BUFFER_SIZE, arr);
+        printf("****************************************\n");
+        if (bytes_received == 2)//got FIN
         {
-        receiver_listen = 0;
+            receiver_listen = 0;
         }
-        
-        printf(" got total recv: %d\n",bytes_received);
+
+        printf("got total recv: %d\n", bytes_received);
         total_recv += bytes_received;
-        
+
         if (bytes_received == -1)
         { // check for errors
             perror("rudp_recv faild");
@@ -120,20 +107,19 @@ int main(int argc, char* argv[])
 
 
         end = clock();
+        
+    // Calculate time taken and average bandwidth
+    time_taken = ((double)(end - start)) * 1000 / CLOCKS_PER_SEC_B;                      // in milliseconds
+    double average_bandwidth = (total_recv / (1024.0 * 1024.0)) / (time_taken / 1000.0); // in MB/s
+    fprintf(stats_file, "Run #%d Data: Time= %f ms ; Speed= %f MB/S\n", run, time_taken, average_bandwidth);
 
-
-            // Calculate time taken and average bandwidth
-            time_taken = ((double)(end - start)) * 1000 / CLOCKS_PER_SEC_B;                      // in milliseconds
-            double average_bandwidth = (total_recv / (1024.0 * 1024.0)) / (time_taken / 1000.0); // in MB/s
-            fprintf(stats_file, "Run #%d Data: Time= %f ms ; Speed= %f MB/S\n", run, time_taken, average_bandwidth);
-
-            total_avg_time += time_taken;
-            total_avg_speed += average_bandwidth;
-            run++;
-
+    total_avg_time += time_taken;
+    total_avg_speed += average_bandwidth;
+    run++;
+}/////////////////TODO
     fprintf(stats_file, " Average time: %f ms\n", total_avg_time / (run - 1));
     fprintf(stats_file, " Average speed: %f MB/s\n", total_avg_speed / (run - 1));
-    }
+
     close_RUDP_recive(sock);
     print_statistics(stats_file);
 
