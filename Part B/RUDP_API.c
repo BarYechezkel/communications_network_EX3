@@ -317,7 +317,7 @@ int rudp_recv(int sock, int data_size, int* arr)
             return FAIL;
         }
         printf("send packet FIN_ACK\n");
-        total_data_received = 2;
+        total_data_received = -2;
     }
 
     return total_data_received;
