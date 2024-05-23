@@ -70,7 +70,7 @@ int rudp_send(int sock, const void* user_data, size_t size_D, int* arr)
         header packet;
         packet.length_data = Buffer;
         packet.flags = DATA;
-        packet.sequence_number = sq++; ////////////////TODO
+        packet.sequence_number = sq++;
         memcpy(packet.data, user_data + i * Buffer, Buffer);
         packet.checksum = calculate_checksum(packet.data, packet.length_data);
 
@@ -141,6 +141,8 @@ int rudp_send(int sock, const void* user_data, size_t size_D, int* arr)
     return total_bytes_sent;
 }
 
+
+
 int RUDP_connect_reciever(int sock, int port)
 {
 
@@ -199,35 +201,41 @@ int RUDP_connect_reciever(int sock, int port)
     return 1;
 }
 
+// Connect to a receiver.
 int RUDP_connect_sender(int sock, char* ip, int port)
 {
 
     // setup a timeout for the socket
     set_timeout(sock, TIME_OUT * 7);
 
+
     struct sockaddr_in reciver_address;
     memset(&reciver_address, 0, sizeof(reciver_address));
     reciver_address.sin_family = AF_INET;
     reciver_address.sin_port = htons(port);
+    // Convert IP address from string to binary
     int rval = inet_pton(AF_INET, (char*)ip, &reciver_address.sin_addr);
     if (rval <= 0) {
         printf("inet_pton() FAILED");
         return FAIL;
     }
-
+    // Initialize SYN packet
     header packetSYN;
     memset(&packetSYN, 0, sizeof(packetSYN));
     packetSYN.flags = SYN;
 
+    // Initialize ACK packet
     header packetAck;
     memset(&packetAck, 0, sizeof(packetAck));
 
+     // Connect to receiver
     if (connect(sock, (struct sockaddr*)&reciver_address, sizeof(reciver_address)) == -1)
     {
         printf("connect() FAILED");
         return FAIL;
     }
 
+    // Send SYN packet
     int bytes_SYN_sent = sendto(sock, &packetSYN, sizeof(packetSYN), 0, NULL, 0);
     if (bytes_SYN_sent == EOF)
     {
@@ -235,12 +243,14 @@ int RUDP_connect_sender(int sock, char* ip, int port)
         return FAIL;
     }
 
+    // Receive ACK packet
     int bytes_received = recvfrom(sock, &packetAck, sizeof(packetAck), 0, NULL, 0);
     if (bytes_received == EOF)
     {
         printf("recvfrom() FAILED");
         return FAIL;
     }
+    // Check if connection created
     if (packetAck.flags == ACK)
     {
         printf("connected complited\n");

@@ -23,8 +23,6 @@
 
 #define Buffer 65000
 
-
-
 typedef struct RUDP_header{ 
 
     int length_data;
@@ -37,35 +35,45 @@ typedef struct RUDP_header{
 }header , *pheader;
 
 
-
-//creating RUDP socket && handshake
+/*
+* creating RUDP socket
+* @return the socket number if the socket was created successfully,
+* -1 if it failed.
+*/
 int rudp_sockets();
 
-
-//Sending data to the peer. The function should wait for an 
-//acknowledgment packet, and if it didn’t receive any, retransmits the data.
-int rudp_send(int sock, const void *user_data, size_t size_D,int*arr);
-
-
-int RUDP_connect_sender(int sock, char* ip ,int port);
-
+/*
+* opening connection between two peers.
+* @return 1 if the connection was successful, -1 otherwise.
+*/
 int RUDP_connect_reciever(int sock, int port);
 
+/*
+connect sender to reciver and established handshake by SYN ,SYN_ACK
+*/
+int RUDP_connect_sender(int sock, char* ip ,int port);
 
+/*
+*Sending data to the peer. The function should wait for an 
+*acknowledgment packet, and if it didn’t receive any, retransmits the data.
+*/
+int rudp_send(int sock, const void *user_data, size_t size_D,int*arr);
 
-//Receive data from a peer.
+/*
+* Receive data from a peer.
+*/
 int rudp_recv(int sock, int data_size,int*arr);
 
-//Closes a connection between peers. 
+/*
+*Closes a connection between peers. 
+*/
 int rudp_close(int sock);
 
 
+
 int send_ack(int socket, header packet);
-
 int wait_for_ACK(int socket, int seq_num, clock_t start_time, int timeout);
-
 int wait_for_FIN_ACK(int socket, int seq_num, clock_t start_time, int timeout);
-
 void close_RUDP_recive(int socket);
 int set_timeout(int socket, int time) ;
 
